@@ -33,6 +33,15 @@
   --number-left: 7.5%;
   --character-pad-left: 16.5%;
   --character-pad-right: 7%;
+
+  /*
+    Visible app viewport. 100vh on iPad Safari is too tall (URL/tab chrome).
+    Fallbacks: vh → dvh → svh; JS overrides with visualViewport pixels.
+  */
+  --app-width: 100vw;
+  --app-height: 100vh;
+  --app-height: 100dvh;
+  --app-height: 100svh;
 }
 
 /* ============================================================
@@ -44,13 +53,15 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  height: var(--app-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #1a0505;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
@@ -61,18 +72,40 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+  /* 1px past the viewport unlocks Safari pull-to-refresh rubber-banding */
+  min-height: calc(var(--app-height) + 1px);
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+  overflow-x: hidden;
+  overflow-y: visible;
+  background: #1a0505;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /*
-  Fixed-aspect stage sized to the largest 2360:1640 rectangle that
-  fits the viewport — fills an iPad A16 landscape exactly.
+  Fixed-aspect stage (2360:1640) fitted to the *visible* viewport.
+  100vh on iPad Safari includes space under the URL/tab bars, which
+  clipped the top of the board (round indicator). Prefer svh / the
+  JS --app-height from visualViewport instead.
 */
 .stage {
   position: relative;
-  width: min(100vw, calc(100vh * 2360 / 1640));
+  width: min(
+    100%,
+    calc(var(--app-height) * 2360 / 1640)
+  );
   aspect-ratio: 2360 / 1640;
   height: auto;
-  max-height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
   overflow: hidden;
   container-type: size;
   container-name: stage;
