@@ -66,6 +66,8 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+  /* Disable iPadOS double-tap-to-zoom; keep pan / pinch */
+  touch-action: manipulation;
 }
 
 body {
@@ -88,6 +90,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+  touch-action: manipulation;
 }
 
 /* Sunburst fills the whole viewport (boot + in-game), like the new-game screen */
