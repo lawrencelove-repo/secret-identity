@@ -861,7 +861,8 @@ body.characters-fullscreen .columns {
 
 body.characters-fullscreen .column--right,
 body.characters-fullscreen .round-indicator,
-body.characters-fullscreen .round-scoreboard {
+body.characters-fullscreen .round-scoreboard,
+body.characters-fullscreen .app-menu {
   display: none !important;
 }
 
