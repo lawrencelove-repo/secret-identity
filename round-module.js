@@ -799,6 +799,9 @@ const RoundModule = (() => {
     document.body.classList.add("is-playing");
     const menuToggle = document.getElementById("app-menu-toggle");
     if (menuToggle) menuToggle.hidden = false;
+    if (typeof CharactersFullscreen !== "undefined") {
+      CharactersFullscreen.showToggle(true);
+    }
     return true;
   }
 

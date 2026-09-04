@@ -798,6 +798,117 @@ body.is-boot .stage {
 }
 
 /* ============================================================
+   Characters fullscreen toggle
+   ============================================================ */
+.characters-fullscreen-toggle {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(12, 12, 12, 0.72);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.characters-fullscreen-toggle[hidden] {
+  display: none;
+}
+
+.characters-fullscreen-toggle:hover,
+.characters-fullscreen-toggle:focus-visible {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(12, 12, 12, 0.88);
+  outline: none;
+}
+
+.characters-fullscreen-toggle__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: block;
+}
+
+.characters-fullscreen-toggle__icon[hidden] {
+  display: none;
+}
+
+/* Characters fullscreen layout: 2 columns × 4 rows (1–4 left, 5–8 right) */
+body.characters-fullscreen .stage {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: var(--app-height);
+  aspect-ratio: auto;
+}
+
+body.characters-fullscreen .columns {
+  /* Leave room for the fixed expand/collapse control */
+  padding:
+    1.5%
+    2%
+    calc(env(safe-area-inset-bottom, 0px) + 4rem)
+    calc(env(safe-area-inset-left, 0px) + 4rem);
+  gap: 0;
+}
+
+body.characters-fullscreen .column--right,
+body.characters-fullscreen .round-indicator,
+body.characters-fullscreen .round-scoreboard {
+  display: none !important;
+}
+
+body.characters-fullscreen .column--left {
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+
+body.characters-fullscreen .column__boxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  grid-auto-flow: column;
+  gap: clamp(0.45rem, 1.2vmin, 0.85rem);
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+body.characters-fullscreen .column__boxes .box--black {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+body.characters-fullscreen .column__boxes .box__number {
+  width: clamp(3.75rem, 11vmin, 7rem);
+  height: clamp(3.75rem, 11vmin, 7rem);
+  margin-top: calc(clamp(3.75rem, 11vmin, 7rem) / -2);
+  font-size: clamp(1.85rem, 5.5vmin, 3.5rem);
+}
+
+body.characters-fullscreen .column__boxes .box__character {
+  /* Clear the enlarged number badge: left offset + badge size + gap */
+  padding-left: calc(var(--number-left) + clamp(3.75rem, 11vmin, 7rem) + 1rem);
+}
+
+body.characters-fullscreen .column__boxes .box__name {
+  font-size: clamp(1.45rem, 4.6vmin, 2.75rem);
+}
+
+body.characters-fullscreen .column__boxes .box__qualifier {
+  font-size: clamp(0.85rem, 2.5vmin, 1.35rem);
+}
+
+/* ============================================================
    Round module — review scoreboard
    ============================================================ */
 .round-scoreboard {

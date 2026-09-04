@@ -478,3 +478,62 @@ function bindCharacterBoxClicks() {
 }
 
 bindCharacterBoxClicks();
+
+/**
+ * In-app characters fullscreen: 2×4 grid of black boxes, scores hidden.
+ */
+const CharactersFullscreen = (() => {
+  const toggle = document.getElementById("characters-fullscreen-toggle");
+  const expandIcon = toggle?.querySelector(".characters-fullscreen-toggle__icon--expand");
+  const collapseIcon = toggle?.querySelector(".characters-fullscreen-toggle__icon--collapse");
+
+  function isActive() {
+    return document.body.classList.contains("characters-fullscreen");
+  }
+
+  function syncToggleUi() {
+    if (!toggle) return;
+    const active = isActive();
+    toggle.setAttribute("aria-pressed", active ? "true" : "false");
+    toggle.setAttribute("aria-label", active ? "Collapse characters" : "Expand characters");
+    if (expandIcon) expandIcon.hidden = active;
+    if (collapseIcon) collapseIcon.hidden = !active;
+  }
+
+  function setActive(active) {
+    document.body.classList.toggle("characters-fullscreen", Boolean(active));
+    syncToggleUi();
+  }
+
+  function toggleMode() {
+    setActive(!isActive());
+  }
+
+  function showToggle(visible) {
+    if (!toggle) return;
+    toggle.hidden = !visible;
+    if (!visible) setActive(false);
+  }
+
+  toggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleMode();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isActive()) {
+      // Don't steal Escape from open modals.
+      if (document.body.classList.contains("character-module-open")) return;
+      if (document.body.classList.contains("score-module-open")) return;
+      if (document.body.classList.contains("new-game-module-open")) return;
+      if (document.getElementById("character-replace-confirm") && !document.getElementById("character-replace-confirm").hidden) {
+        return;
+      }
+      setActive(false);
+    }
+  });
+
+  syncToggleUi();
+
+  return { isActive, setActive, toggleMode, showToggle };
+})();

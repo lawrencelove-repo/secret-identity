@@ -111,6 +111,9 @@ const NewGameModule = (() => {
     openedFromGame = Boolean(options.fromGame);
     draftColors = new Set();
     closeConfirm();
+    if (typeof CharactersFullscreen !== "undefined") {
+      CharactersFullscreen.setActive(false);
+    }
     render();
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
