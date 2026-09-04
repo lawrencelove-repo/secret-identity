@@ -326,6 +326,87 @@ const MAX_PER_CATEGORY = 2;
 /** Once the list is large enough, avoid reusing characters across rounds. */
 const UNIQUE_ACROSS_ROUNDS_THRESHOLD = 32;
 
+/**
+ * Persist how often each character has been dealt on this browser/device.
+ * Deals prefer less-played names so the roster rotates over time.
+ */
+const CharacterHistory = (() => {
+  const STORAGE_KEY = "secret-identity.character-plays";
+
+  function loadPlays() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      const data = JSON.parse(raw);
+      if (data && data.plays && typeof data.plays === "object") return data.plays;
+      if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    } catch (_) {
+      /* ignore corrupt storage */
+    }
+    return {};
+  }
+
+  function savePlays(plays) {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ version: 1, plays })
+      );
+    } catch (_) {
+      /* private mode / quota — dealing still works without persistence */
+    }
+  }
+
+  function getCount(name) {
+    const plays = loadPlays();
+    return Number(plays[name]) || 0;
+  }
+
+  /** Increment play counts for the given character names. */
+  function record(names) {
+    if (!names || !names.length) return;
+    const plays = loadPlays();
+    names.forEach((name) => {
+      if (!name) return;
+      plays[name] = (Number(plays[name]) || 0) + 1;
+    });
+    savePlays(plays);
+  }
+
+  /**
+   * Shuffle within each play-count bucket, then concatenate from least → most played.
+   * So never-seen characters are tried before ones already dealt on this device.
+   */
+  function orderByLeastPlayed(characters) {
+    const plays = loadPlays();
+    const groups = new Map();
+
+    characters.forEach((character) => {
+      const count = Number(plays[character.name]) || 0;
+      if (!groups.has(count)) groups.set(count, []);
+      groups.get(count).push(character);
+    });
+
+    const ordered = [];
+    [...groups.keys()]
+      .sort((a, b) => a - b)
+      .forEach((count) => {
+        ordered.push(...shuffle(groups.get(count)));
+      });
+    return ordered;
+  }
+
+  function clear() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  return { getCount, record, orderByLeastPlayed, clear, loadPlays };
+})();
+
 function shuffle(items) {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -338,6 +419,7 @@ function shuffle(items) {
 /**
  * Pick `count` unique characters, allowing at most MAX_PER_CATEGORY
  * from any single category. Entries without a category are unrestricted.
+ * Prefers characters dealt fewer times on this device (localStorage).
  *
  * @param {number} count
  * @param {{ excludeNames?: string[], categoryCounts?: Record<string, number> }} [options]
@@ -357,7 +439,7 @@ function pickCharacters(count, options = {}) {
     source = source.filter((character) => !excludeNames.has(character.name));
   }
 
-  const pool = shuffle(source);
+  const pool = CharacterHistory.orderByLeastPlayed(source);
   const picks = [];
   const categoryCounts = Object.create(null);
   if (options.categoryCounts) {
@@ -393,7 +475,9 @@ function pickCharacters(count, options = {}) {
  */
 function pickReplacementCharacter(options = {}) {
   const picks = pickCharacters(1, options);
-  return picks[0] || null;
+  const next = picks[0] || null;
+  if (next) CharacterHistory.record([next.name]);
+  return next;
 }
 
 function toSlotCharacter(character, slotNumber) {
@@ -465,6 +549,7 @@ function applyCharactersToBoxes(slotCharacters) {
 
 function dealCharacters(count, excludeNames = []) {
   const picks = pickCharacters(count, { excludeNames });
+  CharacterHistory.record(picks.map((character) => character.name));
   return picks.map((character, index) => toSlotCharacter(character, index + 1));
 }
 
