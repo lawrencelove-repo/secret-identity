@@ -14,54 +14,82 @@
 <body>
   <main class="stage" aria-label="Game board">
     <div class="columns">
-      <!-- Left: character / black slots -->
+      <!-- Left: round indicator + character slots -->
       <div class="column column--left" role="group" aria-label="Character slots">
-        <button type="button" class="box box--black" data-slot="1" aria-label="Character slot 1">
-          <span class="box__number" aria-hidden="true">1</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="2" aria-label="Character slot 2">
-          <span class="box__number" aria-hidden="true">2</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="3" aria-label="Character slot 3">
-          <span class="box__number" aria-hidden="true">3</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="4" aria-label="Character slot 4">
-          <span class="box__number" aria-hidden="true">4</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="5" aria-label="Character slot 5">
-          <span class="box__number" aria-hidden="true">5</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="6" aria-label="Character slot 6">
-          <span class="box__number" aria-hidden="true">6</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="7" aria-label="Character slot 7">
-          <span class="box__number" aria-hidden="true">7</span>
-          <span class="box__character"></span>
-        </button>
-        <button type="button" class="box box--black" data-slot="8" aria-label="Character slot 8">
-          <span class="box__number" aria-hidden="true">8</span>
-          <span class="box__character"></span>
-        </button>
+        <div class="round-indicator" id="round-indicator" aria-label="Round selector">
+          <span class="round-indicator__label">Round:</span>
+          <button type="button" class="round-indicator__num" data-round="1">1</button>
+          <button type="button" class="round-indicator__num" data-round="2">2</button>
+          <button type="button" class="round-indicator__num" data-round="3">3</button>
+          <button type="button" class="round-indicator__num" data-round="4">4</button>
+        </div>
+
+        <div class="column__boxes">
+          <button type="button" class="box box--black" data-slot="1" aria-label="Character slot 1">
+            <span class="box__number" aria-hidden="true">1</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="2" aria-label="Character slot 2">
+            <span class="box__number" aria-hidden="true">2</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="3" aria-label="Character slot 3">
+            <span class="box__number" aria-hidden="true">3</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="4" aria-label="Character slot 4">
+            <span class="box__number" aria-hidden="true">4</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="5" aria-label="Character slot 5">
+            <span class="box__number" aria-hidden="true">5</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="6" aria-label="Character slot 6">
+            <span class="box__number" aria-hidden="true">6</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="7" aria-label="Character slot 7">
+            <span class="box__number" aria-hidden="true">7</span>
+            <span class="box__character"></span>
+          </button>
+          <button type="button" class="box box--black" data-slot="8" aria-label="Character slot 8">
+            <span class="box__number" aria-hidden="true">8</span>
+            <span class="box__character"></span>
+          </button>
+        </div>
       </div>
 
       <!-- Right: color slots (order matches mockup, top → bottom) -->
       <div class="column column--right" role="group" aria-label="Color slots">
-        <button type="button" class="box box--green" aria-label="Green"></button>
-        <button type="button" class="box box--red" aria-label="Red"></button>
-        <button type="button" class="box box--pink" aria-label="Pink"></button>
-        <button type="button" class="box box--grey" aria-label="Grey"></button>
-        <button type="button" class="box box--yellow" aria-label="Yellow"></button>
-        <button type="button" class="box box--white" aria-label="White"></button>
-        <button type="button" class="box box--purple" aria-label="Purple"></button>
-        <button type="button" class="box box--light-blue" aria-label="Light blue"></button>
+        <button type="button" class="box box--green" data-color="green" aria-label="Green">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--red" data-color="red" aria-label="Red">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--pink" data-color="pink" aria-label="Pink">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--grey" data-color="grey" aria-label="Grey">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--yellow" data-color="yellow" aria-label="Yellow">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--white" data-color="white" aria-label="White">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--purple" data-color="purple" aria-label="Purple">
+          <span class="box__score" hidden></span>
+        </button>
+        <button type="button" class="box box--light-blue" data-color="light-blue" aria-label="Light blue">
+          <span class="box__score" hidden></span>
+        </button>
       </div>
     </div>
+
+    <div class="round-scoreboard" id="round-scoreboard" hidden></div>
   </main>
 
   <!-- Character module (detail modal) -->
@@ -124,7 +152,38 @@
     </div>
   </div>
 
+  <!-- Round module confirm (end incomplete round) -->
+  <div
+    class="round-confirm"
+    id="round-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="round-confirm__backdrop" data-round-confirm-close></div>
+    <div
+      class="round-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="round-confirm-title"
+    >
+      <h2 class="round-confirm__title" id="round-confirm-title">End this round?</h2>
+      <p class="round-confirm__body">
+        Not all player scores have been entered for this round.
+        Are you sure you want to end the round and continue?
+      </p>
+      <div class="round-confirm__actions">
+        <button type="button" class="round-confirm__btn round-confirm__btn--ghost" data-round-confirm-no>
+          Cancel
+        </button>
+        <button type="button" class="round-confirm__btn round-confirm__btn--danger" data-round-confirm-yes>
+          End round
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="character-module.js"></script>
   <script src="characters.js"></script>
+  <script src="round-module.js"></script>
 </body>
 </html>
