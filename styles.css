@@ -933,10 +933,21 @@ body.characters-fullscreen .column__boxes .box__character {
 
 body.characters-fullscreen .column__boxes .box__name {
   font-size: clamp(1.45rem, 4.6vmin, 2.75rem);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.1;
 }
 
 body.characters-fullscreen .column__boxes .box__qualifier {
   font-size: clamp(0.85rem, 2.5vmin, 1.35rem);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Flip mode: name + description shown upright and upside-down */
