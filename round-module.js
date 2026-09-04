@@ -689,6 +689,7 @@ const RoundModule = (() => {
     if (viewingRound === roundNumber) {
       displayRound(roundNumber);
     }
+    notifyGameCompleteIfNeeded();
   }
 
   function bindUi() {
@@ -764,9 +765,53 @@ const RoundModule = (() => {
     );
   }
 
+  let winnerAnnounced = false;
+
   function isGameComplete() {
     const finalRound = getRound(TOTAL_ROUNDS);
     return Boolean(finalRound?.characters) && areRoundScoresComplete(TOTAL_ROUNDS);
+  }
+
+  function getPodium() {
+    const totals = getCumulativeScoresThrough(TOTAL_ROUNDS);
+    const standings = activeColors()
+      .map((color) => ({
+        color,
+        name: getPlayerName(color),
+        score: typeof totals[color] === "number" ? totals[color] : 0,
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return PLAYER_COLORS.indexOf(a.color) - PLAYER_COLORS.indexOf(b.color);
+      });
+
+    if (!standings.length) return { first: [], second: [] };
+
+    const firstScore = standings[0].score;
+    const first = standings.filter((entry) => entry.score === firstScore);
+    const rest = standings.filter((entry) => entry.score < firstScore);
+    if (!rest.length) return { first, second: [] };
+
+    const secondScore = rest[0].score;
+    const second = rest.filter((entry) => entry.score === secondScore);
+    return { first, second };
+  }
+
+  /** @deprecated use getPodium().first */
+  function getWinners() {
+    return getPodium().first;
+  }
+
+  function notifyGameCompleteIfNeeded() {
+    if (!isGameComplete() || winnerAnnounced) return false;
+    winnerAnnounced = true;
+    if (typeof CharactersFullscreen !== "undefined") {
+      CharactersFullscreen.setActive(false);
+    }
+    if (typeof WinnerModule !== "undefined") {
+      WinnerModule.open(getPodium());
+    }
+    return true;
   }
 
   function hasActiveGame() {
@@ -791,6 +836,8 @@ const RoundModule = (() => {
     viewingRound = 1;
     gameStarted = true;
     pendingAdvanceTo = null;
+    winnerAnnounced = false;
+    if (typeof WinnerModule !== "undefined") WinnerModule.close();
     restoreColorOrder();
     updateActivePlayerVisibility();
     dealRound(1);
@@ -811,6 +858,9 @@ const RoundModule = (() => {
     startNewGame,
     hasActiveGame,
     isGameComplete,
+    getWinners,
+    getPodium,
+    notifyGameCompleteIfNeeded,
     get gameStarted() {
       return gameStarted;
     },

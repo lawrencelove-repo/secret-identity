@@ -533,6 +533,36 @@
     </div>
   </div>
 
+  <!-- Winner module (end of Round 4) -->
+  <div
+    class="winner-module"
+    id="winner-module"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="winner-module__backdrop" data-winner-module-close></div>
+    <div
+      class="winner-module__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="winner-module-title"
+    >
+      <h2 class="winner-module__title" id="winner-module-title">Winner!</h2>
+      <div class="winner-module__first" id="winner-module-first"></div>
+      <div class="winner-module__second-wrap" id="winner-module-second-wrap" hidden>
+        <p class="winner-module__second-label">2nd place</p>
+        <div class="winner-module__second" id="winner-module-second"></div>
+      </div>
+      <button
+        type="button"
+        class="winner-module__ok"
+        data-winner-module-close
+      >
+        OK
+      </button>
+    </div>
+  </div>
+
   <!-- Character edit module -->
   <div
     class="character-edit-module"
@@ -620,6 +650,7 @@
   <script src="characters.js"></script>
   <script src="round-module.js"></script>
   <script src="score-module.js"></script>
+  <script src="winner-module.js"></script>
   <script src="new-game-module.js"></script>
   <script src="character-edit-module.js"></script>
 </body>

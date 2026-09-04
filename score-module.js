@@ -184,6 +184,7 @@ const ScoreModule = (() => {
     );
     RoundModule.refreshView();
     close();
+    RoundModule.notifyGameCompleteIfNeeded();
   }
 
   function openResetConfirm() {
