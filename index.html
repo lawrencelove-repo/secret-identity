@@ -11,7 +11,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="is-boot">
+  <div class="app-menu" id="app-menu">
+    <button
+      type="button"
+      class="app-menu__toggle"
+      id="app-menu-toggle"
+      aria-label="Menu"
+      aria-expanded="false"
+      aria-controls="app-menu-panel"
+      hidden
+    >
+      <span class="app-menu__burger" aria-hidden="true"></span>
+    </button>
+    <div class="app-menu__panel" id="app-menu-panel" hidden role="menu">
+      <button type="button" class="app-menu__item" role="menuitem" data-menu-new-game>
+        New Game
+      </button>
+    </div>
+  </div>
+
   <main class="stage" aria-label="Game board">
     <div class="columns">
       <!-- Left: round indicator + character slots -->
@@ -60,64 +79,66 @@
         </div>
       </div>
 
-      <!-- Right: color slots (order matches mockup, top → bottom) -->
+      <!-- Right: player color rack (fixed panel + active color seats) -->
       <div class="column column--right" role="group" aria-label="Color slots">
-        <button type="button" class="box box--green" data-color="green" aria-label="Green">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--red" data-color="red" aria-label="Red">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--pink" data-color="pink" aria-label="Pink">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--grey" data-color="grey" aria-label="Grey">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--yellow" data-color="yellow" aria-label="Yellow">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--white" data-color="white" aria-label="White">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--purple" data-color="purple" aria-label="Purple">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
-        <button type="button" class="box box--light-blue" data-color="light-blue" aria-label="Light blue">
-          <span class="box__score" hidden>
-            <span class="box__player-name"></span>
-            <span class="box__player-points"></span>
-          </span>
-          <span class="box__tabulated" hidden aria-hidden="true"></span>
-        </button>
+        <div class="players-panel">
+          <button type="button" class="box box--green" data-color="green" aria-label="Green">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--red" data-color="red" aria-label="Red">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--pink" data-color="pink" aria-label="Pink">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--grey" data-color="grey" aria-label="Grey">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--yellow" data-color="yellow" aria-label="Yellow">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--white" data-color="white" aria-label="White">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--purple" data-color="purple" aria-label="Purple">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+          <button type="button" class="box box--light-blue" data-color="light-blue" aria-label="Light blue">
+            <span class="box__score" hidden>
+              <span class="box__player-name"></span>
+              <span class="box__player-points"></span>
+            </span>
+            <span class="box__tabulated" hidden aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -327,10 +348,71 @@
     </div>
   </div>
 
+  <!-- New game module -->
+  <div
+    class="new-game-module"
+    id="new-game-module"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="new-game-module__backdrop"></div>
+    <div
+      class="new-game-module__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-game-title"
+    >
+      <h2 class="new-game-module__title" id="new-game-title">New Game</h2>
+      <p class="new-game-module__count-label">
+        Players: <span id="new-game-count">0</span>
+      </p>
+      <div class="new-game-module__colors" id="new-game-colors"></div>
+      <p class="new-game-module__hint">Tap any colors to choose players. At least 2 required to start.</p>
+      <div class="new-game-module__actions">
+        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-new-game-cancel>
+          Cancel
+        </button>
+        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-new-game-start>
+          Start
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New game confirm (active game in progress) -->
+  <div
+    class="new-game-confirm"
+    id="new-game-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="new-game-confirm__backdrop" data-new-game-confirm-close></div>
+    <div
+      class="new-game-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-game-confirm-title"
+    >
+      <h2 class="new-game-confirm__title" id="new-game-confirm-title">Start a new game?</h2>
+      <p class="new-game-confirm__body">
+        A game is already in progress. Starting over will erase the current rounds and scores.
+      </p>
+      <div class="new-game-confirm__actions">
+        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-new-game-confirm-no>
+          Cancel
+        </button>
+        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-new-game-confirm-yes>
+          Start new game
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="viewport.js"></script>
   <script src="character-module.js"></script>
   <script src="characters.js"></script>
   <script src="round-module.js"></script>
   <script src="score-module.js"></script>
+  <script src="new-game-module.js"></script>
 </body>
 </html>

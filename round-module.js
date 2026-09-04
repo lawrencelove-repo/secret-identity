@@ -36,6 +36,12 @@ const RoundModule = (() => {
   /** Placeholder until a player-setup flow exists. */
   let playerCount = 8;
 
+  /** Active seat colors for this game (any subset of PLAYER_COLORS, order preserved). */
+  let activePlayerColors = [...PLAYER_COLORS];
+
+  /** True after the first Start from the new-game module. */
+  let gameStarted = false;
+
   /** Display names per color — defaults to the color label until custom entry exists. */
   let playerNames = Object.fromEntries(
     Object.entries(COLOR_LABELS).map(([color, label]) => [color, label])
@@ -84,7 +90,71 @@ const RoundModule = (() => {
   }
 
   function activeColors() {
-    return PLAYER_COLORS.slice(0, playerCount);
+    return [...activePlayerColors];
+  }
+
+  function getPlayersRack() {
+    return (
+      document.querySelector(".players-panel") ||
+      document.querySelector(".column--right")
+    );
+  }
+
+  function updateActivePlayerVisibility() {
+    const column = getPlayersRack();
+    if (!column) return;
+
+    const boxes = [...column.querySelectorAll(".box[data-color]")];
+    const byColor = Object.fromEntries(boxes.map((box) => [box.dataset.color, box]));
+    const active = activePlayerColors;
+    const activeSet = new Set(active);
+
+    PLAYER_COLORS.forEach((color) => {
+      const box = byColor[color];
+      if (!box) return;
+      const isActive = activeSet.has(color);
+      box.hidden = !isActive;
+      box.style.display = isActive ? "" : "none";
+      if (!isActive) {
+        box.classList.remove("is-tabulated");
+        const badge = box.querySelector(".box__tabulated");
+        const scoreEl = box.querySelector(".box__score");
+        if (badge) badge.hidden = true;
+        if (scoreEl) scoreEl.hidden = true;
+      }
+    });
+
+    // Stack active colors in palette order, then inactive (hidden) after.
+    active.forEach((color) => {
+      if (byColor[color]) column.appendChild(byColor[color]);
+    });
+    PLAYER_COLORS.filter((color) => !activeSet.has(color)).forEach((color) => {
+      if (byColor[color]) column.appendChild(byColor[color]);
+    });
+
+    defaultColorOrder = active.map((color) => byColor[color]).filter(Boolean);
+  }
+
+  /**
+   * Set which colors are playing. Preserves PLAYER_COLORS order.
+   * @param {string[]} colorIds
+   */
+  function setActivePlayers(colorIds) {
+    const wanted = new Set(
+      (colorIds || []).filter((color) => PLAYER_COLORS.includes(color))
+    );
+    activePlayerColors = PLAYER_COLORS.filter((color) => wanted.has(color));
+    playerCount = activePlayerColors.length;
+    updateActivePlayerVisibility();
+    return playerCount;
+  }
+
+  function setPlayerCount(count) {
+    const next = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Number(count) || MIN_PLAYERS));
+    activePlayerColors = PLAYER_COLORS.slice(0, next);
+    playerCount = activePlayerColors.length;
+    updateActivePlayerVisibility();
+    return playerCount;
   }
 
   function getUsedCharacterNames(beforeRound = Infinity) {
@@ -249,13 +319,13 @@ const RoundModule = (() => {
   }
 
   function captureDefaultColorOrder() {
-    const column = document.querySelector(".column--right");
+    const column = getPlayersRack();
     if (!column) return;
     defaultColorOrder = [...column.querySelectorAll(".box[data-color]")];
   }
 
   function restoreColorOrder() {
-    const column = document.querySelector(".column--right");
+    const column = getPlayersRack();
     if (!column || !defaultColorOrder.length) return;
     defaultColorOrder.forEach((box) => column.appendChild(box));
   }
@@ -319,14 +389,15 @@ const RoundModule = (() => {
       const value = scores[color];
       if (nameEl) nameEl.textContent = getPlayerName(color);
       if (pointsEl) {
-        pointsEl.textContent = typeof value === "number" ? String(value) : "—";
+        pointsEl.textContent =
+          typeof value === "number" ? String(value) : "0";
       }
       scoreEl.hidden = false;
     });
   }
 
   function reorderColorsByStanding(scores) {
-    const column = document.querySelector(".column--right");
+    const column = getPlayersRack();
     if (!column) return;
 
     const boxes = [...column.querySelectorAll(".box[data-color]")];
@@ -422,7 +493,7 @@ const RoundModule = (() => {
     renderIndicator();
 
     // Boxes always show cumulative totals through the end of the selected round.
-    // The bottom scoreboard still shows that round's per-round scores when reviewing.
+    // At game start (no scores yet), show color names with 0.
     const cumulative = getCumulativeScoresThrough(roundNumber);
     const hasScoredRounds = rounds.some(
       (entry) =>
@@ -432,9 +503,13 @@ const RoundModule = (() => {
 
     if (hasScoredRounds) {
       reorderColorsByStanding(cumulative);
-      showScoreOverlays(cumulative);
     } else {
       restoreColorOrder();
+    }
+
+    if (gameStarted) {
+      showScoreOverlays(cumulative);
+    } else {
       clearScoreOverlays();
     }
 
@@ -507,13 +582,6 @@ const RoundModule = (() => {
 
     if (CharacterModule.isOpen()) CharacterModule.close();
     advanceToRound(targetRound);
-  }
-
-  function setPlayerCount(count) {
-    const next = Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, Number(count) || MIN_PLAYERS));
-    playerCount = next;
-    // Inactive colors keep null scores; no wipe of existing active scores.
-    return playerCount;
   }
 
   function fillPlaceholderScores(roundNumber = currentRound) {
@@ -601,6 +669,9 @@ const RoundModule = (() => {
       if (event.target.closest("#round-confirm")) return;
       if (event.target.closest("#score-module")) return;
       if (event.target.closest("#score-reset-confirm")) return;
+      if (event.target.closest("#new-game-module")) return;
+      if (event.target.closest("#new-game-confirm")) return;
+      if (event.target.closest("#app-menu")) return;
       hideScoreboard();
     });
 
@@ -612,18 +683,63 @@ const RoundModule = (() => {
   }
 
   function init() {
+    captureDefaultColorOrder();
+    bindUi();
+  }
+
+  function resetPlayerNames() {
+    playerNames = Object.fromEntries(
+      Object.entries(COLOR_LABELS).map(([color, label]) => [color, label])
+    );
+  }
+
+  function isGameComplete() {
+    const finalRound = getRound(TOTAL_ROUNDS);
+    return Boolean(finalRound?.characters) && areRoundScoresComplete(TOTAL_ROUNDS);
+  }
+
+  function hasActiveGame() {
+    return gameStarted && !isGameComplete();
+  }
+
+  /**
+   * Begin a fresh game at round 1 with the given player colors.
+   * @param {string[]|number} colorIdsOrCount — selected color ids, or legacy count
+   */
+  function startNewGame(colorIdsOrCount) {
+    if (typeof colorIdsOrCount === "number") {
+      setPlayerCount(colorIdsOrCount);
+    } else {
+      setActivePlayers(colorIdsOrCount);
+    }
+    if (activePlayerColors.length < MIN_PLAYERS) return false;
+
+    resetPlayerNames();
     rounds = createRounds();
     currentRound = 1;
     viewingRound = 1;
-    captureDefaultColorOrder();
-    bindUi();
+    gameStarted = true;
+    pendingAdvanceTo = null;
+    restoreColorOrder();
+    updateActivePlayerVisibility();
     dealRound(1);
     displayRound(1);
+    document.body.classList.remove("is-boot");
+    document.body.classList.add("is-playing");
+    const menuToggle = document.getElementById("app-menu-toggle");
+    if (menuToggle) menuToggle.hidden = false;
+    return true;
   }
 
   // Public API — score entry UI can call these later.
   return {
     init,
+    startNewGame,
+    hasActiveGame,
+    isGameComplete,
+    get gameStarted() {
+      return gameStarted;
+    },
     TOTAL_ROUNDS,
     MIN_SCORE,
     MAX_SCORE,
@@ -641,6 +757,7 @@ const RoundModule = (() => {
       return playerCount;
     },
     activeColors,
+    setActivePlayers,
     setPlayerCount,
     getPlayerName,
     setPlayerName,
