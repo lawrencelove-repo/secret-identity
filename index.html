@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Secret Identity</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="stage" aria-label="Game board">
+    <div class="columns">
+      <!-- Left: identity / black slots -->
+      <div class="column column--left" role="group" aria-label="Identity slots">
+        <button type="button" class="box box--black" aria-label="Identity slot 1"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 2"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 3"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 4"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 5"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 6"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 7"></button>
+        <button type="button" class="box box--black" aria-label="Identity slot 8"></button>
+      </div>
+
+      <!-- Right: color slots (order matches mockup, top → bottom) -->
+      <div class="column column--right" role="group" aria-label="Color slots">
+        <button type="button" class="box box--green" aria-label="Green"></button>
+        <button type="button" class="box box--red" aria-label="Red"></button>
+        <button type="button" class="box box--pink" aria-label="Pink"></button>
+        <button type="button" class="box box--grey" aria-label="Grey"></button>
+        <button type="button" class="box box--yellow" aria-label="Yellow"></button>
+        <button type="button" class="box box--white" aria-label="White"></button>
+        <button type="button" class="box box--purple" aria-label="Purple"></button>
+        <button type="button" class="box box--light-blue" aria-label="Light blue"></button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
