@@ -640,6 +640,17 @@ body.round-confirm-open {
   filter: brightness(1.08);
 }
 
+.round-confirm__btn--dev {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 220, 120, 0.55);
+  color: rgb(255, 220, 120);
+}
+
+.round-confirm__btn--dev:hover,
+.round-confirm__btn--dev:focus-visible {
+  background: rgba(255, 220, 120, 0.18);
+}
+
 /* Swatch colors for scoreboard (reuse box color tokens) */
 .round-scoreboard__swatch.box--light-blue { --box-color: var(--color-light-blue); }
 .round-scoreboard__swatch.box--purple { --box-color: var(--color-purple); }

@@ -34,7 +34,7 @@ const RoundModule = (() => {
   };
 
   /** Placeholder until a player-setup flow exists. */
-  let playerCount = 4;
+  let playerCount = 8;
 
   /** Active play round (1–4). */
   let currentRound = 1;
@@ -117,6 +117,21 @@ const RoundModule = (() => {
       const value = round.scores[colorId];
       return sum + (typeof value === "number" ? value : 0);
     }, 0);
+  }
+
+  /** Running totals from rounds 1 through `roundNumber` (inclusive). */
+  function getCumulativeScoresThrough(roundNumber) {
+    return Object.fromEntries(
+      PLAYER_COLORS.map((color) => {
+        let sum = 0;
+        for (const round of rounds) {
+          if (round.number > roundNumber) break;
+          const value = round.scores[color];
+          if (typeof value === "number") sum += value;
+        }
+        return [color, sum];
+      })
+    );
   }
 
   function areRoundScoresComplete(roundNumber) {
@@ -225,6 +240,11 @@ const RoundModule = (() => {
     boxes.forEach((box) => column.appendChild(box));
   }
 
+  function hideScoreboard() {
+    if (!scoreboardEl || scoreboardEl.hidden) return;
+    scoreboardEl.hidden = true;
+  }
+
   function renderScoreboard(roundNumber) {
     if (!scoreboardEl) return;
 
@@ -295,14 +315,27 @@ const RoundModule = (() => {
     applyCharactersToBoxes(round.characters);
     renderIndicator();
 
-    if (roundNumber < currentRound) {
-      reorderColorsByStanding(round.scores);
-      showScoreOverlays(round.scores);
-      renderScoreboard(roundNumber);
-      document.body.classList.add("round-reviewing");
+    // Boxes always show cumulative totals through the end of the selected round.
+    // The bottom scoreboard still shows that round's per-round scores when reviewing.
+    const cumulative = getCumulativeScoresThrough(roundNumber);
+    const hasScoredRounds = rounds.some(
+      (entry) =>
+        entry.number <= roundNumber &&
+        activeColors().some((color) => typeof entry.scores[color] === "number")
+    );
+
+    if (hasScoredRounds) {
+      reorderColorsByStanding(cumulative);
+      showScoreOverlays(cumulative);
     } else {
       restoreColorOrder();
       clearScoreOverlays();
+    }
+
+    if (roundNumber < currentRound) {
+      renderScoreboard(roundNumber);
+      document.body.classList.add("round-reviewing");
+    } else {
       renderScoreboard(roundNumber);
       document.body.classList.remove("round-reviewing");
     }
@@ -375,6 +408,19 @@ const RoundModule = (() => {
     return playerCount;
   }
 
+  function fillPlaceholderScores(roundNumber = currentRound) {
+    activeColors().forEach((color) => {
+      setPlayerScore(
+        roundNumber,
+        color,
+        Math.floor(Math.random() * (MAX_SCORE + 1))
+      );
+    });
+    if (viewingRound === roundNumber && roundNumber < currentRound) {
+      displayRound(roundNumber);
+    }
+  }
+
   function bindUi() {
     indicatorEl?.addEventListener("click", (event) => {
       const btn = event.target.closest("[data-round]");
@@ -387,6 +433,14 @@ const RoundModule = (() => {
         closeConfirm();
         return;
       }
+      if (event.target.closest("[data-round-confirm-random]")) {
+        const target = pendingAdvanceTo;
+        const roundToScore = currentRound;
+        fillPlaceholderScores(roundToScore);
+        closeConfirm();
+        if (target) advanceToRound(target);
+        return;
+      }
       if (event.target.closest("[data-round-confirm-yes]")) {
         const target = pendingAdvanceTo;
         closeConfirm();
@@ -396,6 +450,15 @@ const RoundModule = (() => {
       if (event.target.closest("[data-round-confirm-close]")) {
         closeConfirm();
       }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!document.body.classList.contains("round-reviewing")) return;
+      if (!scoreboardEl || scoreboardEl.hidden) return;
+      // Keep summary visible when choosing another past round via the indicator
+      if (event.target.closest("#round-indicator")) return;
+      if (event.target.closest("#round-confirm")) return;
+      hideScoreboard();
     });
 
     document.addEventListener("keydown", (event) => {
@@ -442,18 +505,7 @@ const RoundModule = (() => {
     getRound,
     requestRound,
     /** Dev/placeholder: fill random scores for active players on a round. */
-    fillPlaceholderScores(roundNumber = currentRound) {
-      activeColors().forEach((color) => {
-        setPlayerScore(
-          roundNumber,
-          color,
-          Math.floor(Math.random() * (MAX_SCORE + 1))
-        );
-      });
-      if (viewingRound === roundNumber && roundNumber < currentRound) {
-        displayRound(roundNumber);
-      }
-    },
+    fillPlaceholderScores,
   };
 })();
 
