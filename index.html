@@ -28,6 +28,12 @@
       <button type="button" class="app-menu__item" role="menuitem" data-menu-new-game>
         New Game
       </button>
+      <button type="button" class="app-menu__item" role="menuitem" data-menu-edit-characters>
+        Edit Characters
+      </button>
+      <button type="button" class="app-menu__item" role="menuitem" data-menu-clear-history>
+        Clear Play History
+      </button>
     </div>
   </div>
 
@@ -497,11 +503,124 @@
     </div>
   </div>
 
+  <!-- Clear play history confirm -->
+  <div
+    class="new-game-confirm"
+    id="clear-history-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="new-game-confirm__backdrop" data-clear-history-close></div>
+    <div
+      class="new-game-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clear-history-confirm-title"
+    >
+      <h2 class="new-game-confirm__title" id="clear-history-confirm-title">Clear play history?</h2>
+      <p class="new-game-confirm__body">
+        This resets how often characters have been dealt on this device only.
+        It does not change the character list.
+      </p>
+      <div class="new-game-confirm__actions">
+        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-clear-history-no>
+          Cancel
+        </button>
+        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-clear-history-yes>
+          Clear history
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Character edit module -->
+  <div
+    class="character-edit-module"
+    id="character-edit-module"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="character-edit-module__backdrop" data-character-edit-close></div>
+    <div
+      class="character-edit-module__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="character-edit-title"
+    >
+      <div class="character-edit-module__header">
+        <h2 class="character-edit-module__title" id="character-edit-title">Edit Characters</h2>
+        <button
+          type="button"
+          class="character-edit-module__close"
+          data-character-edit-close
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+      <p class="character-edit-module__hint">
+        Edits and play counts save on this device. On desktop, use Export to download a CHARACTERS array for git.
+        Play counts never leave this device.
+      </p>
+      <div class="character-edit-module__toolbar">
+        <input
+          type="search"
+          id="character-edit-search"
+          class="character-edit-module__search"
+          placeholder="Search characters"
+          autocomplete="off"
+        />
+        <button type="button" class="character-edit-module__btn" data-character-edit-new>
+          Add
+        </button>
+        <button type="button" class="character-edit-module__btn character-edit-module__btn--accent" data-character-edit-export>
+          Export
+        </button>
+      </div>
+      <div class="character-edit-module__body">
+        <div class="character-edit-module__list" id="character-edit-list"></div>
+        <form class="character-edit-module__form" id="character-edit-form" hidden data-mode="edit">
+          <label class="character-edit-module__field">
+            <span>Name</span>
+            <input name="name" type="text" required autocomplete="off" />
+          </label>
+          <label class="character-edit-module__field">
+            <span>Category</span>
+            <input name="category" type="text" list="character-edit-categories" autocomplete="off" />
+          </label>
+          <datalist id="character-edit-categories"></datalist>
+          <label class="character-edit-module__field">
+            <span>Description</span>
+            <input name="description" type="text" autocomplete="off" />
+          </label>
+          <label class="character-edit-module__field">
+            <span>Play count (this device)</span>
+            <input name="plays" type="number" min="0" step="1" />
+          </label>
+          <label class="character-edit-module__check">
+            <input name="disabled" type="checkbox" />
+            <span>Disabled (excluded from deals)</span>
+          </label>
+          <div class="character-edit-module__form-actions">
+            <button type="button" class="character-edit-module__btn character-edit-module__btn--danger" data-character-edit-remove hidden>
+              Remove
+            </button>
+            <button type="submit" class="character-edit-module__btn character-edit-module__btn--accent">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+      <p class="character-edit-module__status" id="character-edit-status"></p>
+    </div>
+  </div>
+
   <script src="viewport.js"></script>
   <script src="character-module.js"></script>
   <script src="characters.js"></script>
   <script src="round-module.js"></script>
   <script src="score-module.js"></script>
   <script src="new-game-module.js"></script>
+  <script src="character-edit-module.js"></script>
 </body>
 </html>

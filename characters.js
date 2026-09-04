@@ -362,6 +362,16 @@ const CharacterHistory = (() => {
     return Number(plays[name]) || 0;
   }
 
+  /** Set an absolute play count for a character (device-local). */
+  function setCount(name, count) {
+    if (!name) return;
+    const plays = loadPlays();
+    const value = Math.max(0, Math.floor(Number(count) || 0));
+    if (value === 0) delete plays[name];
+    else plays[name] = value;
+    savePlays(plays);
+  }
+
   /** Increment play counts for the given character names. */
   function record(names) {
     if (!names || !names.length) return;
@@ -404,7 +414,266 @@ const CharacterHistory = (() => {
     }
   }
 
-  return { getCount, record, orderByLeastPlayed, clear, loadPlays };
+  return { getCount, setCount, record, orderByLeastPlayed, clear, loadPlays };
+})();
+
+/**
+ * Device-local catalog overlays on top of the seeded CHARACTERS array.
+ * Play counts stay in CharacterHistory; definition edits live here until
+ * exported into characters.js and committed on desktop.
+ */
+const CharacterCatalog = (() => {
+  const STORAGE_KEY = "secret-identity.character-catalog";
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { extras: [], overrides: {} };
+      const data = JSON.parse(raw);
+      return {
+        extras: Array.isArray(data.extras) ? data.extras : [],
+        overrides:
+          data.overrides && typeof data.overrides === "object" ? data.overrides : {},
+      };
+    } catch (_) {
+      return { extras: [], overrides: {} };
+    }
+  }
+
+  function save(state) {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ version: 1, extras: state.extras, overrides: state.overrides })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function normalizeEntry(entry) {
+    const name = String(entry.name || "").trim();
+    if (!name) return null;
+    const out = {
+      name,
+      category: String(entry.category || "").trim() || "Celebrity",
+    };
+    const description =
+      entry.description == null ? "" : String(entry.description).trim();
+    if (description) out.description = description;
+    if (entry.disabled) out.disabled = true;
+    return out;
+  }
+
+  /** Full merged roster (seed + local extras/overrides), including disabled. */
+  function list() {
+    const { extras, overrides } = load();
+    const rows = [];
+
+    CHARACTERS.forEach((seed) => {
+      const override = overrides[seed.name];
+      if (override && override.deleted) return;
+      const merged = {
+        name: override?.name != null ? String(override.name).trim() : seed.name,
+        category:
+          override?.category != null ? String(override.category).trim() : seed.category,
+        description:
+          override && Object.prototype.hasOwnProperty.call(override, "description")
+            ? override.description
+            : seed.description,
+        disabled:
+          override && Object.prototype.hasOwnProperty.call(override, "disabled")
+            ? Boolean(override.disabled)
+            : Boolean(seed.disabled),
+        source: "seed",
+        seedName: seed.name,
+      };
+      if (!merged.description) delete merged.description;
+      rows.push(merged);
+    });
+
+    extras.forEach((extra, index) => {
+      const entry = normalizeEntry(extra);
+      if (!entry) return;
+      rows.push({
+        ...entry,
+        disabled: Boolean(extra.disabled),
+        source: "local",
+        seedName: null,
+        localIndex: index,
+      });
+    });
+
+    return rows;
+  }
+
+  function listEnabled() {
+    return list().filter((entry) => !entry.disabled);
+  }
+
+  function categories() {
+    const set = new Set();
+    list().forEach((entry) => {
+      if (entry.category) set.add(entry.category);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+
+  function upsertOverride(seedName, fields) {
+    const state = load();
+    const prev = state.overrides[seedName] || {};
+    const next = { ...prev };
+
+    if (fields.name != null) next.name = String(fields.name).trim();
+    if (fields.category != null) next.category = String(fields.category).trim();
+    if (Object.prototype.hasOwnProperty.call(fields, "description")) {
+      const description = fields.description == null ? "" : String(fields.description).trim();
+      next.description = description || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, "disabled")) {
+      next.disabled = Boolean(fields.disabled);
+    }
+
+    // Drop override keys that match the seed exactly.
+    const seed = CHARACTERS.find((entry) => entry.name === seedName);
+    if (seed) {
+      if (next.name === seed.name) delete next.name;
+      if (next.category === seed.category) delete next.category;
+      if ((next.description || null) === (seed.description || null)) {
+        delete next.description;
+      }
+      if (Boolean(next.disabled) === Boolean(seed.disabled)) delete next.disabled;
+    }
+
+    if (Object.keys(next).length === 0) delete state.overrides[seedName];
+    else state.overrides[seedName] = next;
+    save(state);
+  }
+
+  function add(fields) {
+    const entry = normalizeEntry(fields);
+    if (!entry) return { ok: false, error: "Name is required." };
+    const existing = list().some(
+      (row) => row.name.toLowerCase() === entry.name.toLowerCase()
+    );
+    if (existing) return { ok: false, error: "A character with that name already exists." };
+
+    const state = load();
+    state.extras.push({
+      ...entry,
+      disabled: Boolean(fields.disabled),
+    });
+    save(state);
+    if (typeof fields.plays === "number") {
+      CharacterHistory.setCount(entry.name, fields.plays);
+    }
+    return { ok: true, character: entry };
+  }
+
+  function update(rowKey, fields) {
+    // rowKey: { source, seedName, localIndex, name }
+    if (rowKey.source === "seed" && rowKey.seedName) {
+      const previousName = list().find((row) => row.seedName === rowKey.seedName)?.name;
+      upsertOverride(rowKey.seedName, fields);
+      if (previousName && fields.name && fields.name.trim() !== previousName) {
+        const plays = CharacterHistory.getCount(previousName);
+        CharacterHistory.setCount(fields.name.trim(), plays);
+        CharacterHistory.setCount(previousName, 0);
+      }
+      if (typeof fields.plays === "number") {
+        const nextName =
+          fields.name != null ? String(fields.name).trim() : previousName;
+        CharacterHistory.setCount(nextName, fields.plays);
+      }
+      return { ok: true };
+    }
+
+    if (rowKey.source === "local" && Number.isInteger(rowKey.localIndex)) {
+      const state = load();
+      const current = state.extras[rowKey.localIndex];
+      if (!current) return { ok: false, error: "Character not found." };
+      const previousName = current.name;
+      const entry = normalizeEntry({ ...current, ...fields });
+      if (!entry) return { ok: false, error: "Name is required." };
+      state.extras[rowKey.localIndex] = {
+        ...entry,
+        disabled: Boolean(
+          Object.prototype.hasOwnProperty.call(fields, "disabled")
+            ? fields.disabled
+            : current.disabled
+        ),
+      };
+      save(state);
+      if (fields.name && entry.name !== previousName) {
+        const plays = CharacterHistory.getCount(previousName);
+        CharacterHistory.setCount(entry.name, plays);
+        CharacterHistory.setCount(previousName, 0);
+      }
+      if (typeof fields.plays === "number") {
+        CharacterHistory.setCount(entry.name, fields.plays);
+      }
+      return { ok: true };
+    }
+
+    return { ok: false, error: "Unknown character." };
+  }
+
+  function removeLocal(localIndex) {
+    const state = load();
+    if (!Number.isInteger(localIndex) || !state.extras[localIndex]) {
+      return { ok: false, error: "Character not found." };
+    }
+    const [removed] = state.extras.splice(localIndex, 1);
+    save(state);
+    if (removed?.name) CharacterHistory.setCount(removed.name, 0);
+    return { ok: true };
+  }
+
+  function clearLocalEdits() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function toExportObjects() {
+    return list().map((row) => {
+      const entry = { name: row.name, category: row.category || "Celebrity" };
+      if (row.description) entry.description = row.description;
+      if (row.disabled) entry.disabled = true;
+      return entry;
+    });
+  }
+
+  function formatCharactersArrayJs() {
+    const rows = toExportObjects();
+    const lines = rows.map((entry) => {
+      const parts = [
+        `name: ${JSON.stringify(entry.name)}`,
+        `category: ${JSON.stringify(entry.category)}`,
+      ];
+      if (entry.description) {
+        parts.push(`description: ${JSON.stringify(entry.description)}`);
+      }
+      if (entry.disabled) parts.push("disabled: true");
+      return `  { ${parts.join(", ")} },`;
+    });
+    return `const CHARACTERS = [\n${lines.join("\n")}\n];\n`;
+  }
+
+  return {
+    list,
+    listEnabled,
+    categories,
+    add,
+    update,
+    removeLocal,
+    clearLocalEdits,
+    toExportObjects,
+    formatCharactersArrayJs,
+    load,
+  };
 })();
 
 function shuffle(items) {
@@ -426,16 +695,12 @@ function shuffle(items) {
  */
 function pickCharacters(count, options = {}) {
   const excludeNames = new Set(options.excludeNames || []);
+  const enabled = CharacterCatalog.listEnabled();
   const enforceUnique =
-    CHARACTERS.filter((c) => !c.disabled).length >= UNIQUE_ACROSS_ROUNDS_THRESHOLD &&
-    excludeNames.size > 0;
+    enabled.length >= UNIQUE_ACROSS_ROUNDS_THRESHOLD && excludeNames.size > 0;
 
-  let source = CHARACTERS.filter((character) => !character.disabled);
-  if (enforceUnique) {
-    source = source.filter((character) => !excludeNames.has(character.name));
-  } else if (excludeNames.size > 0) {
-    // Always avoid names already on the board / explicitly excluded,
-    // even when the unique-across-rounds threshold isn't in play.
+  let source = enabled;
+  if (excludeNames.size > 0) {
     source = source.filter((character) => !excludeNames.has(character.name));
   }
 
