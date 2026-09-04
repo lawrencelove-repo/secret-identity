@@ -6,21 +6,48 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Secret Identity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="stage" aria-label="Game board">
     <div class="columns">
-      <!-- Left: identity / black slots -->
-      <div class="column column--left" role="group" aria-label="Identity slots">
-        <button type="button" class="box box--black" aria-label="Identity slot 1"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 2"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 3"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 4"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 5"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 6"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 7"></button>
-        <button type="button" class="box box--black" aria-label="Identity slot 8"></button>
+      <!-- Left: character / black slots -->
+      <div class="column column--left" role="group" aria-label="Character slots">
+        <button type="button" class="box box--black" data-slot="1" aria-label="Character slot 1">
+          <span class="box__number" aria-hidden="true">1</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="2" aria-label="Character slot 2">
+          <span class="box__number" aria-hidden="true">2</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="3" aria-label="Character slot 3">
+          <span class="box__number" aria-hidden="true">3</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="4" aria-label="Character slot 4">
+          <span class="box__number" aria-hidden="true">4</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="5" aria-label="Character slot 5">
+          <span class="box__number" aria-hidden="true">5</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="6" aria-label="Character slot 6">
+          <span class="box__number" aria-hidden="true">6</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="7" aria-label="Character slot 7">
+          <span class="box__number" aria-hidden="true">7</span>
+          <span class="box__character"></span>
+        </button>
+        <button type="button" class="box box--black" data-slot="8" aria-label="Character slot 8">
+          <span class="box__number" aria-hidden="true">8</span>
+          <span class="box__character"></span>
+        </button>
       </div>
 
       <!-- Right: color slots (order matches mockup, top → bottom) -->
@@ -36,5 +63,6 @@
       </div>
     </div>
   </main>
+  <script src="characters.js"></script>
 </body>
 </html>
