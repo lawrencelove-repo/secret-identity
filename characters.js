@@ -1,27 +1,54 @@
 /**
  * Seed list of celebrities / pop-culture characters.
- * Add more entries over time — boxes pull 8 unique random picks on load.
- * Optional qualifier in parentheses is shown smaller beneath the name.
+ * Add more entries over time — boxes pull random picks on load.
+ *
+ * Optional fields:
+ *   category    — used to limit how many of the same type appear at once
+ *   description — shown under the name when present; richer uses later
  */
 const CHARACTERS = [
-  "Ariana Grande",
-  "Joan of Arc",
-  "Ted Lasso",
-  "Sonic",
-  "Buzz Lightyear",
-  "Peter Pan",
-  "Betty Boop",
-  "Wednesday Addams (The Addams Family)",
-  "Carrie Bradshaw (Sx and the City)",
+  {
+    name: "Ariana Grande",
+    category: "Celebrity",
+  },
+  {
+    name: "Joan of Arc",
+    category: "Historical figure",
+  },
+  {
+    name: "Ted Lasso",
+    category: "TV character",
+  },
+  {
+    name: "Sonic",
+    category: "Cartoon character",
+  },
+  {
+    name: "Buzz Lightyear",
+    category: "Movie character",
+    description: "Toy Story",
+  },
+  {
+    name: "Peter Pan",
+    category: "Literary character",
+  },
+  {
+    name: "Betty Boop",
+    category: "Cartoon character",
+  },
+  {
+    name: "Wednesday Addams",
+    category: "TV character",
+    description: "The Addams Family",
+  },
+  {
+    name: "Carrie Bradshaw",
+    description: "Sex and the City",
+  },
 ];
 
-function parseCharacter(raw) {
-  const match = raw.match(/^(.*?)\s*\((.+)\)\s*$/);
-  if (match) {
-    return { name: match[1].trim(), qualifier: match[2].trim() };
-  }
-  return { name: raw.trim(), qualifier: null };
-}
+/** Max characters that may share the same category in one deal. */
+const MAX_PER_CATEGORY = 2;
 
 function shuffle(items) {
   const copy = [...items];
@@ -32,34 +59,51 @@ function shuffle(items) {
   return copy;
 }
 
+/**
+ * Pick `count` unique characters, allowing at most MAX_PER_CATEGORY
+ * from any single category. Entries without a category are unrestricted.
+ */
 function pickCharacters(count) {
-  if (CHARACTERS.length < count) {
-    console.warn(
-      `CHARACTERS has ${CHARACTERS.length} entries; need ${count}. Some boxes may repeat.`
-    );
-  }
   const pool = shuffle(CHARACTERS);
   const picks = [];
-  for (let i = 0; i < count; i += 1) {
-    picks.push(pool[i % pool.length]);
+  const categoryCounts = Object.create(null);
+
+  for (const character of pool) {
+    if (picks.length >= count) break;
+
+    const category = character.category;
+    if (category) {
+      const used = categoryCounts[category] || 0;
+      if (used >= MAX_PER_CATEGORY) continue;
+      categoryCounts[category] = used + 1;
+    }
+
+    picks.push(character);
   }
+
+  if (picks.length < count) {
+    console.warn(
+      `Could only pick ${picks.length} of ${count} characters under the ` +
+        `max-${MAX_PER_CATEGORY}-per-category rule. Add more variety to CHARACTERS.`
+    );
+  }
+
   return picks;
 }
 
-function renderCharacter(container, raw) {
-  const { name, qualifier } = parseCharacter(raw);
+function renderCharacter(container, character) {
   container.replaceChildren();
 
   const nameEl = document.createElement("span");
   nameEl.className = "box__name";
-  nameEl.textContent = name;
+  nameEl.textContent = character.name;
   container.appendChild(nameEl);
 
-  if (qualifier) {
-    const qualEl = document.createElement("span");
-    qualEl.className = "box__qualifier";
-    qualEl.textContent = qualifier;
-    container.appendChild(qualEl);
+  if (character.description) {
+    const descEl = document.createElement("span");
+    descEl.className = "box__qualifier";
+    descEl.textContent = character.description;
+    container.appendChild(descEl);
   }
 }
 
@@ -69,11 +113,44 @@ function populateCharacterBoxes() {
 
   slots.forEach((box, index) => {
     const characterEl = box.querySelector(".box__character");
-    const raw = picks[index];
-    renderCharacter(characterEl, raw);
-    box.setAttribute("aria-label", `Character slot ${index + 1}: ${raw}`);
-    box.dataset.character = raw;
+    const character = picks[index];
+    const slotNumber = index + 1;
+
+    if (!character) {
+      characterEl.replaceChildren();
+      box.removeAttribute("data-character");
+      delete box._character;
+      box.setAttribute("aria-label", `Character slot ${slotNumber}`);
+      return;
+    }
+
+    renderCharacter(characterEl, character);
+    box._character = {
+      number: slotNumber,
+      name: character.name,
+      category: character.category || null,
+      description: character.description || null,
+    };
+    box.dataset.character = character.name;
+    if (character.category) {
+      box.dataset.category = character.category;
+    } else {
+      delete box.dataset.category;
+    }
+    box.setAttribute(
+      "aria-label",
+      `Character slot ${slotNumber}: ${character.name}`
+    );
+  });
+}
+
+function bindCharacterBoxClicks() {
+  document.querySelector(".column--left")?.addEventListener("click", (event) => {
+    const box = event.target.closest(".box--black");
+    if (!box || !box._character) return;
+    CharacterModule.open(box._character);
   });
 }
 
 populateCharacterBoxes();
+bindCharacterBoxClicks();
