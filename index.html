@@ -63,28 +63,60 @@
       <!-- Right: color slots (order matches mockup, top → bottom) -->
       <div class="column column--right" role="group" aria-label="Color slots">
         <button type="button" class="box box--green" data-color="green" aria-label="Green">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--red" data-color="red" aria-label="Red">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--pink" data-color="pink" aria-label="Pink">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--grey" data-color="grey" aria-label="Grey">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--yellow" data-color="yellow" aria-label="Yellow">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--white" data-color="white" aria-label="White">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--purple" data-color="purple" aria-label="Purple">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
         <button type="button" class="box box--light-blue" data-color="light-blue" aria-label="Light blue">
-          <span class="box__score" hidden></span>
+          <span class="box__score" hidden>
+            <span class="box__player-name"></span>
+            <span class="box__player-points"></span>
+          </span>
+          <span class="box__tabulated" hidden aria-hidden="true"></span>
         </button>
       </div>
     </div>
@@ -185,8 +217,119 @@
     </div>
   </div>
 
+  <!-- Score module -->
+  <div
+    class="score-module"
+    id="score-module"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="score-module__backdrop"></div>
+    <div
+      class="score-module__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Score entry"
+    >
+      <div class="score-module__selected">
+        <div class="score-module__hero" id="score-module-hero"></div>
+        <div class="score-module__overlay">
+          <div class="score-module__name-wrap" id="score-module-name-wrap">
+            <button
+              type="button"
+              class="score-module__player-name"
+              id="score-module-player-name"
+              aria-label="Edit player name"
+            ></button>
+            <div class="score-module__name-edit" id="score-module-name-edit" hidden>
+              <div class="score-module__name-field">
+                <input
+                  type="text"
+                  class="score-module__name-input"
+                  id="score-module-name-input"
+                  maxlength="24"
+                  autocomplete="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  aria-label="Player name"
+                />
+                <button
+                  type="button"
+                  class="score-module__name-clear"
+                  data-score-name-clear
+                  aria-label="Clear name"
+                >
+                  ×
+                </button>
+              </div>
+              <button
+                type="button"
+                class="score-module__name-action score-module__name-action--save"
+                data-score-name-save
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                class="score-module__name-action score-module__name-action--cancel"
+                data-score-name-cancel
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          <span class="score-module__points" id="score-module-points">0</span>
+        </div>
+      </div>
+
+      <div class="score-module__others" id="score-module-others"></div>
+
+      <div class="score-module__actions">
+        <button type="button" class="score-module__btn score-module__btn--ghost" data-score-back>
+          Back
+        </button>
+        <button type="button" class="score-module__btn score-module__btn--warn" data-score-reset>
+          Reset
+        </button>
+        <button type="button" class="score-module__btn score-module__btn--ok" data-score-ok>
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score module reset confirm -->
+  <div
+    class="score-reset-confirm"
+    id="score-reset-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="score-reset-confirm__backdrop" data-score-reset-close></div>
+    <div
+      class="score-reset-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="score-reset-title"
+    >
+      <h2 class="score-reset-confirm__title" id="score-reset-title">Reset score?</h2>
+      <p class="score-reset-confirm__body">
+        Clear this player's points and marks for the selected round?
+      </p>
+      <div class="score-reset-confirm__actions">
+        <button type="button" class="score-module__btn score-module__btn--ghost" data-score-reset-no>
+          Cancel
+        </button>
+        <button type="button" class="score-module__btn score-module__btn--warn" data-score-reset-yes>
+          Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="character-module.js"></script>
   <script src="characters.js"></script>
   <script src="round-module.js"></script>
+  <script src="score-module.js"></script>
 </body>
 </html>

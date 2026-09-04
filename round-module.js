@@ -36,13 +36,18 @@ const RoundModule = (() => {
   /** Placeholder until a player-setup flow exists. */
   let playerCount = 8;
 
+  /** Display names per color — defaults to the color label until custom entry exists. */
+  let playerNames = Object.fromEntries(
+    Object.entries(COLOR_LABELS).map(([color, label]) => [color, label])
+  );
+
   /** Active play round (1–4). */
   let currentRound = 1;
 
   /** Round whose characters/scores are currently shown. */
   let viewingRound = 1;
 
-  /** @type {Array<{ number: number, characters: Array|null, scores: Record<string, number|null> }>} */
+  /** @type {Array<{ number: number, characters: Array|null, scores: Record<string, number|null>, marks: Record<string, string[]>, tabulated: Record<string, boolean> }>} */
   let rounds = [];
 
   let pendingAdvanceTo = null;
@@ -56,11 +61,21 @@ const RoundModule = (() => {
     return Object.fromEntries(PLAYER_COLORS.map((color) => [color, null]));
   }
 
+  function createEmptyMarks() {
+    return Object.fromEntries(PLAYER_COLORS.map((color) => [color, []]));
+  }
+
+  function createEmptyTabulated() {
+    return Object.fromEntries(PLAYER_COLORS.map((color) => [color, false]));
+  }
+
   function createRounds() {
     return Array.from({ length: TOTAL_ROUNDS }, (_, index) => ({
       number: index + 1,
       characters: null,
       scores: createEmptyScores(),
+      marks: createEmptyMarks(),
+      tabulated: createEmptyTabulated(),
     }));
   }
 
@@ -112,6 +127,62 @@ const RoundModule = (() => {
     return getRound(roundNumber)?.scores[colorId] ?? null;
   }
 
+  function getPlayerMarks(roundNumber, colorId) {
+    const round = getRound(roundNumber);
+    if (!round) return [];
+    return [...(round.marks[colorId] || [])];
+  }
+
+  function adjustPlayerScore(roundNumber, colorId, delta) {
+    if (!delta) return false;
+    const current = getPlayerScore(roundNumber, colorId);
+    const base = typeof current === "number" ? current : 0;
+    const next = Math.max(MIN_SCORE, Math.min(MAX_SCORE, base + delta));
+    return setPlayerScore(roundNumber, colorId, next);
+  }
+
+  /**
+   * Commit a player's round score and opponent marks from the score module.
+   * Newly marked opponents gain +1; unmarked opponents lose -1.
+   */
+  function commitPlayerRoundScore(roundNumber, colorId, points, marks = []) {
+    const round = getRound(roundNumber);
+    if (!round || !activeColors().includes(colorId)) return false;
+
+    const allowed = new Set(activeColors().filter((color) => color !== colorId));
+    const previousMarks = new Set(round.marks[colorId] || []);
+    const nextMarks = [...new Set(marks.filter((mark) => allowed.has(mark)))];
+    const nextSet = new Set(nextMarks);
+
+    for (const mark of nextSet) {
+      if (!previousMarks.has(mark)) {
+        adjustPlayerScore(roundNumber, mark, 1);
+      }
+    }
+    for (const mark of previousMarks) {
+      if (!nextSet.has(mark)) {
+        adjustPlayerScore(roundNumber, mark, -1);
+      }
+    }
+
+    if (!setPlayerScore(roundNumber, colorId, points)) return false;
+    round.marks[colorId] = nextMarks;
+    round.tabulated[colorId] = true;
+    return true;
+  }
+
+  function clearPlayerRoundScore(roundNumber, colorId) {
+    return commitPlayerRoundScore(roundNumber, colorId, 0, []);
+  }
+
+  function isPlayerTabulated(roundNumber, colorId) {
+    return Boolean(getRound(roundNumber)?.tabulated[colorId]);
+  }
+
+  function refreshView() {
+    displayRound(viewingRound);
+  }
+
   function getRoundTotal(colorId) {
     return rounds.reduce((sum, round) => {
       const value = round.scores[colorId];
@@ -137,7 +208,7 @@ const RoundModule = (() => {
   function areRoundScoresComplete(roundNumber) {
     const round = getRound(roundNumber);
     if (!round) return false;
-    return activeColors().every((color) => typeof round.scores[color] === "number");
+    return activeColors().every((color) => round.tabulated[color] === true);
   }
 
   /** True if this round has started (characters dealt) but scores are incomplete. */
@@ -192,7 +263,40 @@ const RoundModule = (() => {
   function clearScoreOverlays() {
     document.querySelectorAll(".column--right .box__score").forEach((el) => {
       el.hidden = true;
-      el.textContent = "";
+      const nameEl = el.querySelector(".box__player-name");
+      const pointsEl = el.querySelector(".box__player-points");
+      if (nameEl) nameEl.textContent = "";
+      if (pointsEl) pointsEl.textContent = "";
+    });
+  }
+
+  function getPlayerName(colorId) {
+    const custom = playerNames[colorId];
+    if (custom && String(custom).trim()) return String(custom).trim();
+    return COLOR_LABELS[colorId] || colorId;
+  }
+
+  function setPlayerName(colorId, name) {
+    if (!PLAYER_COLORS.includes(colorId)) return false;
+    const trimmed = name == null ? "" : String(name).trim();
+    playerNames[colorId] = trimmed || COLOR_LABELS[colorId];
+    refreshView();
+    return true;
+  }
+
+  function updateTabulatedIndicators(roundNumber) {
+    const round = getRound(roundNumber);
+
+    document.querySelectorAll(".column--right .box[data-color]").forEach((box) => {
+      const color = box.dataset.color;
+      const badge = box.querySelector(".box__tabulated");
+      const isActive = activeColors().includes(color);
+      const isTabulated = Boolean(isActive && round?.tabulated[color]);
+
+      box.classList.toggle("is-tabulated", isTabulated);
+      if (badge) {
+        badge.hidden = !isTabulated;
+      }
     });
   }
 
@@ -202,20 +306,22 @@ const RoundModule = (() => {
       const scoreEl = box.querySelector(".box__score");
       if (!scoreEl) return;
 
+      const nameEl = scoreEl.querySelector(".box__player-name");
+      const pointsEl = scoreEl.querySelector(".box__player-points");
+
       if (!activeColors().includes(color)) {
         scoreEl.hidden = true;
-        scoreEl.textContent = "";
+        if (nameEl) nameEl.textContent = "";
+        if (pointsEl) pointsEl.textContent = "";
         return;
       }
 
       const value = scores[color];
-      if (typeof value === "number") {
-        scoreEl.textContent = String(value);
-        scoreEl.hidden = false;
-      } else {
-        scoreEl.textContent = "—";
-        scoreEl.hidden = false;
+      if (nameEl) nameEl.textContent = getPlayerName(color);
+      if (pointsEl) {
+        pointsEl.textContent = typeof value === "number" ? String(value) : "—";
       }
+      scoreEl.hidden = false;
     });
   }
 
@@ -260,7 +366,7 @@ const RoundModule = (() => {
     const standings = activeColors()
       .map((color) => ({
         color,
-        label: COLOR_LABELS[color],
+        label: getPlayerName(color),
         score: round.scores[color],
       }))
       .sort((a, b) => {
@@ -331,6 +437,8 @@ const RoundModule = (() => {
       restoreColorOrder();
       clearScoreOverlays();
     }
+
+    updateTabulatedIndicators(roundNumber);
 
     if (roundNumber < currentRound) {
       renderScoreboard(roundNumber);
@@ -409,14 +517,37 @@ const RoundModule = (() => {
   }
 
   function fillPlaceholderScores(roundNumber = currentRound) {
-    activeColors().forEach((color) => {
-      setPlayerScore(
-        roundNumber,
-        color,
-        Math.floor(Math.random() * (MAX_SCORE + 1))
-      );
+    const round = getRound(roundNumber);
+    if (!round) return;
+
+    const colors = activeColors();
+
+    // Clear everything — checkboxes only appear after a real calculation below.
+    colors.forEach((color) => {
+      round.marks[color] = [];
+      round.tabulated[color] = false;
+      round.scores[color] = null;
     });
-    if (viewingRound === roundNumber && roundNumber < currentRound) {
+
+    // Calculate each player in turn, same as opening the score module and hitting OK.
+    colors.forEach((color) => {
+      const others = colors.filter((entry) => entry !== color);
+      const markCount = Math.floor(Math.random() * (others.length + 1));
+      const picks = [...others];
+      for (let i = picks.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [picks[i], picks[j]] = [picks[j], picks[i]];
+      }
+      const marks = picks.slice(0, markCount);
+
+      const current = getPlayerScore(roundNumber, color);
+      const base = typeof current === "number" ? current : 0;
+      const points = Math.min(MAX_SCORE, base + marks.length);
+
+      commitPlayerRoundScore(roundNumber, color, points, marks);
+    });
+
+    if (viewingRound === roundNumber) {
       displayRound(roundNumber);
     }
   }
@@ -426,6 +557,16 @@ const RoundModule = (() => {
       const btn = event.target.closest("[data-round]");
       if (!btn) return;
       requestRound(Number(btn.dataset.round));
+    });
+
+    document.querySelector(".column--right")?.addEventListener("click", (event) => {
+      const box = event.target.closest(".box[data-color]");
+      if (!box) return;
+      const colorId = box.dataset.color;
+      if (!activeColors().includes(colorId)) return;
+      if (typeof ScoreModule !== "undefined") {
+        ScoreModule.open(colorId);
+      }
     });
 
     confirmEl?.addEventListener("click", (event) => {
@@ -458,6 +599,8 @@ const RoundModule = (() => {
       // Keep summary visible when choosing another past round via the indicator
       if (event.target.closest("#round-indicator")) return;
       if (event.target.closest("#round-confirm")) return;
+      if (event.target.closest("#score-module")) return;
+      if (event.target.closest("#score-reset-confirm")) return;
       hideScoreboard();
     });
 
@@ -487,6 +630,7 @@ const RoundModule = (() => {
     MIN_PLAYERS,
     MAX_PLAYERS,
     PLAYER_COLORS,
+    COLOR_LABELS,
     get currentRound() {
       return currentRound;
     },
@@ -496,14 +640,23 @@ const RoundModule = (() => {
     get playerCount() {
       return playerCount;
     },
+    activeColors,
     setPlayerCount,
+    getPlayerName,
+    setPlayerName,
     setPlayerScore,
     getPlayerScore,
+    getPlayerMarks,
+    commitPlayerRoundScore,
+    clearPlayerRoundScore,
+    isPlayerTabulated,
     getRoundTotal,
+    getCumulativeScoresThrough,
     areRoundScoresComplete,
     isRoundIncomplete,
     getRound,
     requestRound,
+    refreshView,
     /** Dev/placeholder: fill random scores for active players on a round. */
     fillPlaceholderScores,
   };
