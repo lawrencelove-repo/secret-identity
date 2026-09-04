@@ -492,17 +492,32 @@ function toSlotCharacter(character, slotNumber) {
 function renderCharacter(container, character) {
   container.replaceChildren();
 
-  const nameEl = document.createElement("span");
-  nameEl.className = "box__name";
-  nameEl.textContent = character.name;
-  container.appendChild(nameEl);
+  function makeFace(modifier) {
+    const face = document.createElement("span");
+    face.className = `box__character-face box__character-face--${modifier}`;
 
-  if (character.description) {
-    const descEl = document.createElement("span");
-    descEl.className = "box__qualifier";
-    descEl.textContent = character.description;
-    container.appendChild(descEl);
+    const nameEl = document.createElement("span");
+    nameEl.className = "box__name";
+    nameEl.textContent = character.name;
+    face.appendChild(nameEl);
+
+    if (character.description) {
+      const descEl = document.createElement("span");
+      descEl.className = "box__qualifier";
+      descEl.textContent = character.description;
+      face.appendChild(descEl);
+    }
+
+    return face;
   }
+
+  const up = makeFace("up");
+  const divider = document.createElement("span");
+  divider.className = "box__character-divider";
+  divider.setAttribute("aria-hidden", "true");
+  const down = makeFace("down");
+
+  container.append(up, divider, down);
 }
 
 /**
@@ -566,14 +581,21 @@ bindCharacterBoxClicks();
 
 /**
  * In-app characters fullscreen: 2×4 grid of black boxes, scores hidden.
+ * Optional flip mode mirrors names upside-down for opposite sides of the table.
  */
 const CharactersFullscreen = (() => {
+  const controls = document.getElementById("characters-view-controls");
   const toggle = document.getElementById("characters-fullscreen-toggle");
+  const flipToggle = document.getElementById("characters-flip-toggle");
   const expandIcon = toggle?.querySelector(".characters-fullscreen-toggle__icon--expand");
   const collapseIcon = toggle?.querySelector(".characters-fullscreen-toggle__icon--collapse");
 
   function isActive() {
     return document.body.classList.contains("characters-fullscreen");
+  }
+
+  function isFlipActive() {
+    return document.body.classList.contains("characters-flip");
   }
 
   function syncToggleUi() {
@@ -583,10 +605,33 @@ const CharactersFullscreen = (() => {
     toggle.setAttribute("aria-label", active ? "Collapse characters" : "Expand characters");
     if (expandIcon) expandIcon.hidden = active;
     if (collapseIcon) collapseIcon.hidden = !active;
+    if (flipToggle) {
+      flipToggle.hidden = !active;
+      flipToggle.setAttribute("aria-pressed", isFlipActive() ? "true" : "false");
+    }
+  }
+
+  function refreshRenderedCharacters() {
+    document.querySelectorAll(".column--left .box--black").forEach((box) => {
+      if (!box._character) return;
+      const characterEl = box.querySelector(".box__character");
+      if (characterEl) renderCharacter(characterEl, box._character);
+    });
+  }
+
+  function setFlipActive(active) {
+    document.body.classList.toggle("characters-flip", Boolean(active) && isActive());
+    if (isActive()) refreshRenderedCharacters();
+    syncToggleUi();
   }
 
   function setActive(active) {
     document.body.classList.toggle("characters-fullscreen", Boolean(active));
+    if (!active) {
+      document.body.classList.remove("characters-flip");
+    } else {
+      refreshRenderedCharacters();
+    }
     syncToggleUi();
   }
 
@@ -594,15 +639,25 @@ const CharactersFullscreen = (() => {
     setActive(!isActive());
   }
 
+  function toggleFlip() {
+    if (!isActive()) return;
+    setFlipActive(!isFlipActive());
+  }
+
   function showToggle(visible) {
-    if (!toggle) return;
-    toggle.hidden = !visible;
+    if (!controls) return;
+    controls.hidden = !visible;
     if (!visible) setActive(false);
   }
 
   toggle?.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleMode();
+  });
+
+  flipToggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleFlip();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -620,5 +675,5 @@ const CharactersFullscreen = (() => {
 
   syncToggleUi();
 
-  return { isActive, setActive, toggleMode, showToggle };
+  return { isActive, setActive, toggleMode, showToggle, isFlipActive, setFlipActive, toggleFlip };
 })();

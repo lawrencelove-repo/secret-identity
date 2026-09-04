@@ -31,21 +31,36 @@
     </div>
   </div>
 
-  <button
-    type="button"
-    class="characters-fullscreen-toggle"
-    id="characters-fullscreen-toggle"
-    aria-label="Expand characters"
-    aria-pressed="false"
-    hidden
-  >
-    <svg class="characters-fullscreen-toggle__icon characters-fullscreen-toggle__icon--expand" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M3 9V3h6M15 3h6v6M9 21H3v-5M21 15v6h-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-    <svg class="characters-fullscreen-toggle__icon characters-fullscreen-toggle__icon--collapse" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
-      <path d="M9 3v6H3M21 9h-6V3M3 15h6v6M15 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-  </button>
+  <div class="characters-view-controls" id="characters-view-controls" hidden>
+    <button
+      type="button"
+      class="characters-view-btn"
+      id="characters-fullscreen-toggle"
+      aria-label="Expand characters"
+      aria-pressed="false"
+    >
+      <svg class="characters-view-btn__icon characters-fullscreen-toggle__icon--expand" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3 9V3h6M15 3h6v6M9 21H3v-5M21 15v6h-6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <svg class="characters-view-btn__icon characters-fullscreen-toggle__icon--collapse" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
+        <path d="M9 3v6H3M21 9h-6V3M3 15h6v6M15 21v-6h6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="characters-view-btn"
+      id="characters-flip-toggle"
+      aria-label="Flip character names for opposite sides of the table"
+      aria-pressed="false"
+      hidden
+    >
+      <svg class="characters-view-btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 3v18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+        <path d="m7 8 5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="m7 16 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
 
   <main class="stage" aria-label="Game board">
     <div class="columns">
