@@ -340,7 +340,7 @@ function shuffle(items) {
  * from any single category. Entries without a category are unrestricted.
  *
  * @param {number} count
- * @param {{ excludeNames?: string[] }} [options]
+ * @param {{ excludeNames?: string[], categoryCounts?: Record<string, number> }} [options]
  */
 function pickCharacters(count, options = {}) {
   const excludeNames = new Set(options.excludeNames || []);
@@ -351,11 +351,18 @@ function pickCharacters(count, options = {}) {
   let source = CHARACTERS.filter((character) => !character.disabled);
   if (enforceUnique) {
     source = source.filter((character) => !excludeNames.has(character.name));
+  } else if (excludeNames.size > 0) {
+    // Always avoid names already on the board / explicitly excluded,
+    // even when the unique-across-rounds threshold isn't in play.
+    source = source.filter((character) => !excludeNames.has(character.name));
   }
 
   const pool = shuffle(source);
   const picks = [];
   const categoryCounts = Object.create(null);
+  if (options.categoryCounts) {
+    Object.assign(categoryCounts, options.categoryCounts);
+  }
 
   for (const character of pool) {
     if (picks.length >= count) break;
@@ -378,6 +385,15 @@ function pickCharacters(count, options = {}) {
   }
 
   return picks;
+}
+
+/**
+ * Pick a single replacement character for a slot.
+ * @param {{ excludeNames?: string[], categoryCounts?: Record<string, number> }} [options]
+ */
+function pickReplacementCharacter(options = {}) {
+  const picks = pickCharacters(1, options);
+  return picks[0] || null;
 }
 
 function toSlotCharacter(character, slotNumber) {

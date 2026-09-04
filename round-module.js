@@ -297,6 +297,77 @@ const RoundModule = (() => {
     return round.characters;
   }
 
+  /** True if any active player has a numeric score or is tabulated this round. */
+  function roundHasAwardedPoints(roundNumber) {
+    const round = getRound(roundNumber);
+    if (!round) return false;
+    return activeColors().some(
+      (color) =>
+        typeof round.scores[color] === "number" || round.tabulated[color] === true
+    );
+  }
+
+  /**
+   * Replace is only for the active (current) round while viewing it —
+   * not past rounds under review.
+   */
+  function canReplaceCharacter() {
+    return Boolean(
+      gameStarted &&
+        viewingRound === currentRound &&
+        getRound(currentRound)?.characters
+    );
+  }
+
+  /**
+   * Swap the character in `slotNumber` (1–8) for a fresh pick.
+   * @returns {{ ok: boolean, character?: object, needsConfirm?: boolean, error?: string }}
+   */
+  function replaceCharacter(slotNumber, options = {}) {
+    if (!canReplaceCharacter()) {
+      return { ok: false, error: "Characters can only be replaced on the current round." };
+    }
+
+    const round = getRound(currentRound);
+    if (!round?.characters) {
+      return { ok: false, error: "No characters dealt for this round." };
+    }
+
+    const hasPoints = roundHasAwardedPoints(currentRound);
+    if (hasPoints && !options.confirmed) {
+      return { ok: false, needsConfirm: true };
+    }
+
+    const index = round.characters.findIndex(
+      (entry) => entry.number === Number(slotNumber)
+    );
+    if (index < 0) {
+      return { ok: false, error: "Character slot not found." };
+    }
+
+    const remaining = round.characters.filter((_, i) => i !== index);
+    const excludeNames = [
+      ...getUsedCharacterNames(currentRound),
+      ...remaining.map((entry) => entry.name),
+    ];
+
+    const categoryCounts = Object.create(null);
+    remaining.forEach((entry) => {
+      if (!entry.category) return;
+      categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+    });
+
+    const next = pickReplacementCharacter({ excludeNames, categoryCounts });
+    if (!next) {
+      return { ok: false, error: "No replacement character available." };
+    }
+
+    const slotCharacter = toSlotCharacter(next, Number(slotNumber));
+    round.characters[index] = slotCharacter;
+    displayRound(currentRound);
+    return { ok: true, character: slotCharacter };
+  }
+
   function ensureRoundDealt(roundNumber) {
     const round = getRound(roundNumber);
     if (!round) return;
@@ -774,9 +845,11 @@ const RoundModule = (() => {
     getRound,
     requestRound,
     refreshView,
+    canReplaceCharacter,
+    roundHasAwardedPoints,
+    replaceCharacter,
     /** Dev/placeholder: fill random scores for active players on a round. */
     fillPlaceholderScores,
   };
 })();
-
 RoundModule.init();

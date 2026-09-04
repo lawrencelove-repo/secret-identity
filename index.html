@@ -161,6 +161,32 @@
     >
       <button
         type="button"
+        class="character-module__replace"
+        data-character-module-replace
+        aria-label="Replace character"
+        hidden
+      >
+        <svg class="character-module__replace-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="M1 4v6h6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
         class="character-module__close"
         data-character-module-close
         aria-label="Close"
@@ -202,6 +228,38 @@
       >
         OK
       </button>
+    </div>
+  </div>
+
+  <!-- Character replace confirm (scores already started this round) -->
+  <div
+    class="character-replace-confirm"
+    id="character-replace-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="character-replace-confirm__backdrop" data-character-replace-confirm-close></div>
+    <div
+      class="character-replace-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="character-replace-confirm-title"
+    >
+      <h2 class="character-replace-confirm__title" id="character-replace-confirm-title">
+        Replace this character?
+      </h2>
+      <p class="character-replace-confirm__body">
+        Points have already been entered for this round. Replacing a character may
+        confuse scoring — continue anyway?
+      </p>
+      <div class="character-replace-confirm__actions">
+        <button type="button" class="character-module__ok character-module__ok--ghost" data-character-replace-confirm-no>
+          Cancel
+        </button>
+        <button type="button" class="character-module__ok" data-character-replace-confirm-yes>
+          Replace
+        </button>
+      </div>
     </div>
   </div>
 
