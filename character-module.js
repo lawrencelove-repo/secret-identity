@@ -1,7 +1,7 @@
 /**
  * Character module — modal detail view for a dealt character slot.
  * Supports numbered prev/next navigation with wraparound across the 8 slots,
- * plus replace (current round only; confirms if scores already started).
+ * plus replace / specify (current round only; confirms if scores already started).
  */
 const CharacterModule = (() => {
   const root = document.getElementById("character-module");
@@ -10,11 +10,13 @@ const CharacterModule = (() => {
   const categoryEl = document.getElementById("character-module-category");
   const descriptionEl = document.getElementById("character-module-description");
   const replaceBtn = root?.querySelector("[data-character-module-replace]");
+  const specifyBtn = root?.querySelector("[data-character-module-specify]");
   const confirmEl = document.getElementById("character-replace-confirm");
 
   let previouslyFocused = null;
   let currentIndex = 0;
   let pendingReplaceSlot = null;
+  let pendingCharacterName = null;
 
   function getRoster() {
     return [...document.querySelectorAll(".column--left .box--black")]
@@ -32,10 +34,15 @@ const CharacterModule = (() => {
     }
   }
 
-  function updateReplaceButton() {
-    if (!replaceBtn) return;
-    const allowed = typeof RoundModule !== "undefined" && RoundModule.canReplaceCharacter();
-    replaceBtn.hidden = !allowed;
+  function updateActionButtons() {
+    const allowed =
+      typeof RoundModule !== "undefined" && RoundModule.canReplaceCharacter();
+    if (replaceBtn) replaceBtn.hidden = !allowed;
+    if (specifyBtn) {
+      const specifyOn =
+        typeof AppSettings !== "undefined" && AppSettings.getSpecifyCharacter();
+      specifyBtn.hidden = !(allowed && specifyOn);
+    }
   }
 
   function render(character) {
@@ -43,7 +50,7 @@ const CharacterModule = (() => {
     nameEl.textContent = character.name;
     setMeta(categoryEl, character.category || null);
     setMeta(descriptionEl, character.description || null);
-    updateReplaceButton();
+    updateActionButtons();
   }
 
   function showAt(index) {
@@ -78,6 +85,9 @@ const CharacterModule = (() => {
     if (!root || root.hidden) return;
 
     closeConfirm();
+    if (typeof CharacterSpecifyModule !== "undefined") {
+      CharacterSpecifyModule.close();
+    }
     root.hidden = true;
     root.setAttribute("aria-hidden", "true");
     document.body.classList.remove("character-module-open");
@@ -100,8 +110,9 @@ const CharacterModule = (() => {
     showAt(currentIndex - 1);
   }
 
-  function openConfirm(slotNumber) {
+  function openConfirm(slotNumber, characterName = null) {
     pendingReplaceSlot = slotNumber;
+    pendingCharacterName = characterName;
     if (!confirmEl) return;
     confirmEl.hidden = false;
     confirmEl.setAttribute("aria-hidden", "false");
@@ -110,28 +121,14 @@ const CharacterModule = (() => {
 
   function closeConfirm() {
     pendingReplaceSlot = null;
+    pendingCharacterName = null;
     if (!confirmEl || confirmEl.hidden) return;
     confirmEl.hidden = true;
     confirmEl.setAttribute("aria-hidden", "true");
   }
 
-  function applyReplace(confirmed) {
-    const roster = getRoster();
-    const current = roster[currentIndex];
-    if (!current) return;
-
-    const result = RoundModule.replaceCharacter(current.number, { confirmed });
-    if (result.needsConfirm) {
-      openConfirm(current.number);
-      return;
-    }
-    if (!result.ok) {
-      console.warn(result.error || "Could not replace character.");
-      return;
-    }
-
+  function refreshAfterReplace(result) {
     closeConfirm();
-    // Roster updated on the board — refresh modal to the same slot number.
     const nextRoster = getRoster();
     const matchIndex = nextRoster.findIndex(
       (entry) => entry.number === result.character.number
@@ -140,9 +137,53 @@ const CharacterModule = (() => {
     showAt(currentIndex);
   }
 
+  function applyReplace(confirmed, characterName = null) {
+    const roster = getRoster();
+    const current = roster[currentIndex];
+    if (!current) return;
+
+    const options = { confirmed };
+    if (characterName) options.characterName = characterName;
+
+    const result = RoundModule.replaceCharacter(current.number, options);
+    if (result.needsConfirm) {
+      openConfirm(current.number, characterName);
+      return;
+    }
+    if (!result.ok) {
+      console.warn(result.error || "Could not replace character.");
+      return;
+    }
+
+    refreshAfterReplace(result);
+  }
+
   function requestReplace() {
     if (!RoundModule.canReplaceCharacter()) return;
     applyReplace(false);
+  }
+
+  function requestSpecify() {
+    if (!RoundModule.canReplaceCharacter()) return;
+    if (typeof AppSettings !== "undefined" && !AppSettings.getSpecifyCharacter()) {
+      return;
+    }
+    if (typeof CharacterSpecifyModule === "undefined") return;
+
+    const roster = getRoster();
+    const current = roster[currentIndex];
+    if (!current) return;
+
+    const excludeNames = roster
+      .filter((entry) => entry.number !== current.number)
+      .map((entry) => entry.name);
+
+    CharacterSpecifyModule.open({
+      excludeNames,
+      onPick: (name) => {
+        applyReplace(false, name);
+      },
+    });
   }
 
   root?.addEventListener("click", (event) => {
@@ -160,6 +201,10 @@ const CharacterModule = (() => {
     }
     if (event.target.closest("[data-character-module-replace]")) {
       requestReplace();
+      return;
+    }
+    if (event.target.closest("[data-character-module-specify]")) {
+      requestSpecify();
     }
   });
 
@@ -171,9 +216,10 @@ const CharacterModule = (() => {
     }
     if (event.target.closest("[data-character-replace-confirm-yes]")) {
       const slot = pendingReplaceSlot;
+      const name = pendingCharacterName;
       closeConfirm();
       if (slot != null) {
-        applyReplace(true);
+        applyReplace(true, name);
       }
       return;
     }
@@ -183,6 +229,10 @@ const CharacterModule = (() => {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (typeof CharacterSpecifyModule !== "undefined" && CharacterSpecifyModule.isOpen()) {
+      return;
+    }
+
     if (confirmEl && !confirmEl.hidden) {
       if (event.key === "Escape") {
         closeConfirm();
@@ -205,6 +255,12 @@ const CharacterModule = (() => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
       prev();
+    }
+  });
+
+  document.addEventListener("secret-identity:settings-change", (event) => {
+    if (event.detail?.key === "specifyCharacter" && isOpen()) {
+      updateActionButtons();
     }
   });
 

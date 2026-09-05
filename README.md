@@ -15,6 +15,16 @@ From the hamburger menu (visible once a game has started):
 | **New Game** | Opens color selection (confirms first if a game is already in progress) |
 | **Edit Characters** | Opens the character editor |
 | **Clear Play History** | Confirms, then resets deal counts **on this device only** |
+| **Settings** | Opens the settings panel |
+
+### Settings
+
+| Setting | What it does |
+|---|---|
+| **Specify character** | Cookie toggle. When on, a pencil appears in the character modal to pick a specific replacement |
+| **Allow Random** | Cookie toggle. When on, the **Random** button appears on the incomplete-round confirm |
+
+Installable as a PWA (manifest + service worker) with icons under `assets/favicon/`.
 
 ---
 
@@ -60,6 +70,18 @@ Bottom-left controls (while playing):
 
 - **Expand / collapse** — characters fill the screen in a 2×4 grid (scores hidden)
 - **Flip** — shows each name upright and upside-down (for a tablet flat on the table)
+
+---
+
+## Local server
+
+From the project root:
+
+```powershell
+.\scripts\start-server.ps1
+```
+
+Or in **Cursor / VS Code**: **Terminal → Run Task… → Start local server** (also bound as the default build task: `Ctrl+Shift+B`). The script clears anything already on port 5173, then serves at http://127.0.0.1:5173/.
 
 ---
 

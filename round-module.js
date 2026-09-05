@@ -357,7 +357,23 @@ const RoundModule = (() => {
       categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
     });
 
-    const next = pickReplacementCharacter({ excludeNames, categoryCounts });
+    let next = null;
+    if (options.characterName) {
+      const wanted = String(options.characterName).trim();
+      const catalog = CharacterCatalog.listEnabled();
+      const found = catalog.find((entry) => entry.name === wanted);
+      if (!found) {
+        return { ok: false, error: "Character not found or is disabled." };
+      }
+      if (excludeNames.includes(found.name)) {
+        return { ok: false, error: "That character is already in use." };
+      }
+      next = found;
+      CharacterHistory.record([found.name]);
+    } else {
+      next = pickReplacementCharacter({ excludeNames, categoryCounts });
+    }
+
     if (!next) {
       return { ok: false, error: "No replacement character available." };
     }
@@ -598,6 +614,12 @@ const RoundModule = (() => {
   function openConfirm(targetRound) {
     pendingAdvanceTo = targetRound;
     if (!confirmEl) return;
+    const randomBtn = confirmEl.querySelector("[data-round-confirm-random]");
+    if (randomBtn) {
+      const allow =
+        typeof AppSettings !== "undefined" && AppSettings.getAllowRandom();
+      randomBtn.hidden = !allow;
+    }
     confirmEl.hidden = false;
     confirmEl.setAttribute("aria-hidden", "false");
     document.body.classList.add("round-confirm-open");
