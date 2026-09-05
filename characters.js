@@ -782,7 +782,8 @@ function renderCharacter(container, character) {
   divider.setAttribute("aria-hidden", "true");
   const down = makeFace("down");
 
-  container.append(up, divider, down);
+  // Flip mode: upside-down on top, upright on bottom (for opposite sides of the table).
+  container.append(down, divider, up);
 }
 
 /**
