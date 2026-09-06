@@ -353,8 +353,9 @@ const RoundModule = (() => {
 
     const categoryCounts = Object.create(null);
     remaining.forEach((entry) => {
-      if (!entry.category) return;
-      categoryCounts[entry.category] = (categoryCounts[entry.category] || 0) + 1;
+      CharacterCatalog.categoriesOf(entry).forEach((category) => {
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+      });
     });
 
     let next = null;

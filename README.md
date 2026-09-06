@@ -55,10 +55,10 @@ The roster is seeded in `characters.js` (`CHARACTERS`). Deals prefer characters 
 ### Optional fields on a character
 
 ```js
-{ name: "Example", category: "Movie character", description: "Some Film", disabled: true }
+{ name: "Example", categories: ["Singer", "Actor"], description: "Some Film", disabled: true }
 ```
 
-- `category` — limits how many of the same type appear in one deal  
+- `category` or `categories` — one label, slash/comma-separated string, or array; deal limits apply per label, and multi values display as `Singer/Actor`. In **Edit Characters**, pick from the managed category list (or use **Manage list** to add/rename/delete labels).  
 - `description` — shown under the name when present  
 - `disabled: true` — excluded from dealing  
 

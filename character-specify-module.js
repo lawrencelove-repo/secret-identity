@@ -30,7 +30,9 @@ const CharacterSpecifyModule = (() => {
       .filter((row) => !excludeNames.has(row.name))
       .filter((row) => {
         if (!filterText) return true;
-        const hay = `${row.name} ${row.category || ""} ${row.description || ""}`.toLowerCase();
+        const hay = `${row.name} ${CharacterCatalog.formatCategories(
+          CharacterCatalog.categoriesOf(row)
+        )} ${row.description || ""}`.toLowerCase();
         return hay.includes(filterText);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -40,9 +42,12 @@ const CharacterSpecifyModule = (() => {
       btn.type = "button";
       btn.className = "character-specify-module__row";
       btn.dataset.name = row.name;
+      const categoryText = CharacterCatalog.formatCategories(
+        CharacterCatalog.categoriesOf(row)
+      );
       btn.innerHTML = `
         <span class="character-specify-module__row-name">${escapeHtml(row.name)}</span>
-        <span class="character-specify-module__row-meta">${escapeHtml(row.category || "")}${
+        <span class="character-specify-module__row-meta">${escapeHtml(categoryText)}${
           row.description ? ` · ${escapeHtml(row.description)}` : ""
         }</span>
       `;

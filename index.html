@@ -703,9 +703,19 @@
           type="search"
           id="character-edit-search"
           class="character-edit-module__search"
-          placeholder="Search characters"
+          placeholder="Search name, category, description"
           autocomplete="off"
         />
+        <label class="character-edit-module__category-filter">
+          <span class="character-edit-module__category-filter-label">Category</span>
+          <select
+            id="character-edit-category-filter"
+            class="character-edit-module__category-select"
+            aria-label="Filter by category"
+          >
+            <option value="">All categories</option>
+          </select>
+        </label>
         <button type="button" class="character-edit-module__btn" data-character-edit-new>
           Add
         </button>
@@ -720,11 +730,84 @@
             <span>Name</span>
             <input name="name" type="text" required autocomplete="off" />
           </label>
-          <label class="character-edit-module__field">
-            <span>Category</span>
-            <input name="category" type="text" list="character-edit-categories" autocomplete="off" />
-          </label>
-          <datalist id="character-edit-categories"></datalist>
+          <div class="character-edit-module__categories" id="character-edit-categories-field">
+            <div class="character-edit-module__categories-head">
+              <span class="character-edit-module__categories-label">Categories</span>
+              <button
+                type="button"
+                class="character-edit-module__link-btn"
+                data-manage-categories
+              >
+                Manage list
+              </button>
+            </div>
+            <div
+              class="character-edit-module__chips"
+              id="character-edit-category-chips"
+              aria-live="polite"
+            ></div>
+            <div class="character-edit-module__category-add">
+              <select
+                id="character-edit-category-pick"
+                class="character-edit-module__category-pick"
+                aria-label="Add category"
+              >
+                <option value="">Add category…</option>
+              </select>
+              <button
+                type="button"
+                class="character-edit-module__btn"
+                data-add-category
+              >
+                Add
+              </button>
+            </div>
+            <p class="character-edit-module__field-hint">
+              Shown as Singer/Actor when more than one is selected.
+            </p>
+          </div>
+
+          <div
+            class="character-edit-module__manage"
+            id="character-edit-category-manage"
+            hidden
+          >
+            <div class="character-edit-module__manage-head">
+              <h3 class="character-edit-module__manage-title">Manage categories</h3>
+              <button
+                type="button"
+                class="character-edit-module__link-btn"
+                data-manage-categories-done
+              >
+                Done
+              </button>
+            </div>
+            <p class="character-edit-module__field-hint">
+              Add, rename, or remove labels used when tagging characters.
+              Rename/remove updates characters on this device.
+            </p>
+            <div class="character-edit-module__manage-add">
+              <input
+                type="text"
+                id="character-edit-category-new"
+                class="character-edit-module__manage-input"
+                placeholder="New category name"
+                autocomplete="off"
+              />
+              <button
+                type="button"
+                class="character-edit-module__btn character-edit-module__btn--accent"
+                data-category-manage-add
+              >
+                Add
+              </button>
+            </div>
+            <div
+              class="character-edit-module__manage-list"
+              id="character-edit-category-manage-list"
+            ></div>
+          </div>
+
           <label class="character-edit-module__field">
             <span>Description</span>
             <input name="description" type="text" autocomplete="off" />

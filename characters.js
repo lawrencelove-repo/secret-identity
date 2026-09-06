@@ -3,7 +3,8 @@
  * Add more entries over time — boxes pull random picks per round.
  *
  * Optional fields:
- *   category    — used to limit how many of the same type appear at once
+ *   category / categories — one string, slash-separated string, or string array.
+ *     Multiple values limit deals per type and display joined with "/".
  *   description — shown under the name when present; richer uses later
  *   disabled    — when true, excluded from dealing into the game
  */
@@ -451,12 +452,69 @@ const CharacterCatalog = (() => {
     }
   }
 
+  /**
+   * Accept a string, slash/comma-separated string, or array → unique trimmed labels.
+   * "Singer/Actor" and "Singer, Actor" both become ["Singer", "Actor"].
+   */
+  function normalizeCategories(value) {
+    const parts = [];
+    const pushParts = (raw) => {
+      String(raw)
+        .split(/[/|,]/)
+        .forEach((part) => {
+          const trimmed = part.trim();
+          if (trimmed) parts.push(trimmed);
+        });
+    };
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item == null) return;
+        pushParts(item);
+      });
+    } else if (value != null && String(value).trim()) {
+      pushParts(value);
+    }
+
+    const seen = new Set();
+    const out = [];
+    parts.forEach((part) => {
+      const key = part.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(part);
+    });
+    return out.length ? out : ["Celebrity"];
+  }
+
+  function formatCategories(categories) {
+    const list = Array.isArray(categories) ? categories : normalizeCategories(categories);
+    return list.join("/");
+  }
+
+  function categoriesEqual(a, b) {
+    const left = normalizeCategories(a);
+    const right = normalizeCategories(b);
+    if (left.length !== right.length) return false;
+    return left.every((value, index) => value === right[index]);
+  }
+
+  function categoriesOf(entry) {
+    if (!entry) return [];
+    if (Array.isArray(entry.categories) && entry.categories.length) {
+      return normalizeCategories(entry.categories);
+    }
+    return normalizeCategories(entry.category);
+  }
+
   function normalizeEntry(entry) {
     const name = String(entry.name || "").trim();
     if (!name) return null;
+    const categories = normalizeCategories(entry.categories ?? entry.category);
     const out = {
       name,
-      category: String(entry.category || "").trim() || "Celebrity",
+      categories,
+      category: formatCategories(categories),
     };
     const description =
       entry.description == null ? "" : String(entry.description).trim();
@@ -473,10 +531,16 @@ const CharacterCatalog = (() => {
     CHARACTERS.forEach((seed) => {
       const override = overrides[seed.name];
       if (override && override.deleted) return;
+      const categories =
+        override &&
+        (Object.prototype.hasOwnProperty.call(override, "categories") ||
+          Object.prototype.hasOwnProperty.call(override, "category"))
+          ? normalizeCategories(override.categories ?? override.category)
+          : normalizeCategories(seed.categories ?? seed.category);
       const merged = {
         name: override?.name != null ? String(override.name).trim() : seed.name,
-        category:
-          override?.category != null ? String(override.category).trim() : seed.category,
+        categories,
+        category: formatCategories(categories),
         description:
           override && Object.prototype.hasOwnProperty.call(override, "description")
             ? override.description
@@ -514,7 +578,7 @@ const CharacterCatalog = (() => {
   function categories() {
     const set = new Set();
     list().forEach((entry) => {
-      if (entry.category) set.add(entry.category);
+      categoriesOf(entry).forEach((category) => set.add(category));
     });
     return [...set].sort((a, b) => a.localeCompare(b));
   }
@@ -525,7 +589,13 @@ const CharacterCatalog = (() => {
     const next = { ...prev };
 
     if (fields.name != null) next.name = String(fields.name).trim();
-    if (fields.category != null) next.category = String(fields.category).trim();
+    if (
+      Object.prototype.hasOwnProperty.call(fields, "categories") ||
+      Object.prototype.hasOwnProperty.call(fields, "category")
+    ) {
+      next.categories = normalizeCategories(fields.categories ?? fields.category);
+      delete next.category;
+    }
     if (Object.prototype.hasOwnProperty.call(fields, "description")) {
       const description = fields.description == null ? "" : String(fields.description).trim();
       next.description = description || null;
@@ -538,7 +608,13 @@ const CharacterCatalog = (() => {
     const seed = CHARACTERS.find((entry) => entry.name === seedName);
     if (seed) {
       if (next.name === seed.name) delete next.name;
-      if (next.category === seed.category) delete next.category;
+      if (
+        next.categories &&
+        categoriesEqual(next.categories, seed.categories ?? seed.category)
+      ) {
+        delete next.categories;
+        delete next.category;
+      }
       if ((next.description || null) === (seed.description || null)) {
         delete next.description;
       }
@@ -560,7 +636,9 @@ const CharacterCatalog = (() => {
 
     const state = load();
     state.extras.push({
-      ...entry,
+      name: entry.name,
+      categories: entry.categories,
+      description: entry.description,
       disabled: Boolean(fields.disabled),
     });
     save(state);
@@ -596,7 +674,9 @@ const CharacterCatalog = (() => {
       const entry = normalizeEntry({ ...current, ...fields });
       if (!entry) return { ok: false, error: "Name is required." };
       state.extras[rowKey.localIndex] = {
-        ...entry,
+        name: entry.name,
+        categories: entry.categories,
+        description: entry.description,
         disabled: Boolean(
           Object.prototype.hasOwnProperty.call(fields, "disabled")
             ? fields.disabled
@@ -637,9 +717,55 @@ const CharacterCatalog = (() => {
     }
   }
 
+  function rowKeyFor(row) {
+    if (row.source === "seed") {
+      return { source: "seed", seedName: row.seedName };
+    }
+    return { source: "local", localIndex: row.localIndex };
+  }
+
+  function renameCategory(fromName, toName) {
+    const from = String(fromName || "").trim();
+    const to = String(toName || "").trim();
+    if (!from || !to) return { ok: false, error: "Both names are required." };
+    let updated = 0;
+    list().forEach((row) => {
+      const cats = categoriesOf(row);
+      if (!cats.some((item) => item.toLowerCase() === from.toLowerCase())) return;
+      const next = normalizeCategories(
+        cats.map((item) => (item.toLowerCase() === from.toLowerCase() ? to : item))
+      );
+      const result = update(rowKeyFor(row), { categories: next });
+      if (result.ok) updated += 1;
+    });
+    return { ok: true, updated };
+  }
+
+  function removeCategory(categoryName) {
+    const label = String(categoryName || "").trim();
+    if (!label) return { ok: false, error: "Category required." };
+    let updated = 0;
+    list().forEach((row) => {
+      const cats = categoriesOf(row);
+      if (!cats.some((item) => item.toLowerCase() === label.toLowerCase())) return;
+      const next = cats.filter((item) => item.toLowerCase() !== label.toLowerCase());
+      const result = update(rowKeyFor(row), {
+        categories: next.length ? next : ["Celebrity"],
+      });
+      if (result.ok) updated += 1;
+    });
+    return { ok: true, updated };
+  }
+
   function toExportObjects() {
     return list().map((row) => {
-      const entry = { name: row.name, category: row.category || "Celebrity" };
+      const cats = categoriesOf(row);
+      const entry = { name: row.name };
+      if (cats.length <= 1) {
+        entry.category = cats[0] || "Celebrity";
+      } else {
+        entry.categories = cats;
+      }
       if (row.description) entry.description = row.description;
       if (row.disabled) entry.disabled = true;
       return entry;
@@ -649,10 +775,12 @@ const CharacterCatalog = (() => {
   function formatCharactersArrayJs() {
     const rows = toExportObjects();
     const lines = rows.map((entry) => {
-      const parts = [
-        `name: ${JSON.stringify(entry.name)}`,
-        `category: ${JSON.stringify(entry.category)}`,
-      ];
+      const parts = [`name: ${JSON.stringify(entry.name)}`];
+      if (entry.categories) {
+        parts.push(`categories: ${JSON.stringify(entry.categories)}`);
+      } else {
+        parts.push(`category: ${JSON.stringify(entry.category)}`);
+      }
       if (entry.description) {
         parts.push(`description: ${JSON.stringify(entry.description)}`);
       }
@@ -666,6 +794,11 @@ const CharacterCatalog = (() => {
     list,
     listEnabled,
     categories,
+    categoriesOf,
+    normalizeCategories,
+    formatCategories,
+    renameCategory,
+    removeCategory,
     add,
     update,
     removeLocal,
@@ -674,6 +807,111 @@ const CharacterCatalog = (() => {
     formatCharactersArrayJs,
     load,
   };
+})();
+
+/**
+ * Managed list of standard category labels used by the edit UI.
+ * Seeded from (and kept in sync with) categories actually used on characters.
+ */
+const CategoryCatalog = (() => {
+  const STORAGE_KEY = "secret-identity.categories";
+
+  function loadStored() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data?.categories)) return null;
+      return CharacterCatalog.normalizeCategories(data.categories);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function save(categories) {
+    const unique = CharacterCatalog.normalizeCategories(categories);
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ version: 1, categories: unique })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+    return unique;
+  }
+
+  function usedOnRoster() {
+    return CharacterCatalog.categories();
+  }
+
+  function list() {
+    const stored = loadStored();
+    const used = usedOnRoster();
+    const set = new Set();
+    (stored || []).forEach((name) => set.add(name));
+    used.forEach((name) => set.add(name));
+    if (!stored) {
+      // First run: persist roster-derived standards so Manage has a real list.
+      const seeded = [...set].sort((a, b) => a.localeCompare(b));
+      save(seeded);
+      return seeded;
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+
+  function standardsOnly() {
+    const stored = loadStored();
+    if (!stored) return list();
+    return [...stored].sort((a, b) => a.localeCompare(b));
+  }
+
+  function add(name) {
+    const next = CharacterCatalog.normalizeCategories(name);
+    if (!next.length) return { ok: false, error: "Enter a category name." };
+    const label = next[0];
+    const current = list();
+    if (current.some((item) => item.toLowerCase() === label.toLowerCase())) {
+      return { ok: false, error: "That category already exists." };
+    }
+    const stored = loadStored() || current;
+    save([...stored, label]);
+    return { ok: true, category: label };
+  }
+
+  function rename(fromName, toName) {
+    const from = String(fromName || "").trim();
+    const to = CharacterCatalog.normalizeCategories(toName)[0];
+    if (!from || !to) return { ok: false, error: "Both names are required." };
+    if (from.toLowerCase() === to.toLowerCase()) {
+      return { ok: false, error: "New name must be different." };
+    }
+    const current = list();
+    if (current.some((item) => item.toLowerCase() === to.toLowerCase() && item.toLowerCase() !== from.toLowerCase())) {
+      return { ok: false, error: "That category already exists." };
+    }
+    const rosterResult = CharacterCatalog.renameCategory(from, to);
+    if (!rosterResult.ok) return rosterResult;
+    const stored = (loadStored() || current).map((item) =>
+      item.toLowerCase() === from.toLowerCase() ? to : item
+    );
+    save(stored);
+    return { ok: true, category: to, updated: rosterResult.updated };
+  }
+
+  function remove(name) {
+    const label = String(name || "").trim();
+    if (!label) return { ok: false, error: "Category required." };
+    const rosterResult = CharacterCatalog.removeCategory(label);
+    if (!rosterResult.ok) return rosterResult;
+    const stored = (loadStored() || list()).filter(
+      (item) => item.toLowerCase() !== label.toLowerCase()
+    );
+    save(stored);
+    return { ok: true, updated: rosterResult.updated };
+  }
+
+  return { list, standardsOnly, add, rename, remove };
 })();
 
 function shuffle(items) {
@@ -687,7 +925,7 @@ function shuffle(items) {
 
 /**
  * Pick `count` unique characters, allowing at most MAX_PER_CATEGORY
- * from any single category. Entries without a category are unrestricted.
+ * from any single category. Entries without categories are unrestricted.
  * Prefers characters dealt fewer times on this device (localStorage).
  *
  * @param {number} count
@@ -714,12 +952,13 @@ function pickCharacters(count, options = {}) {
   for (const character of pool) {
     if (picks.length >= count) break;
 
-    const category = character.category;
-    if (category) {
-      const used = categoryCounts[category] || 0;
-      if (used >= MAX_PER_CATEGORY) continue;
-      categoryCounts[category] = used + 1;
+    const cats = CharacterCatalog.categoriesOf(character);
+    if (cats.some((category) => (categoryCounts[category] || 0) >= MAX_PER_CATEGORY)) {
+      continue;
     }
+    cats.forEach((category) => {
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    });
 
     picks.push(character);
   }
@@ -746,10 +985,12 @@ function pickReplacementCharacter(options = {}) {
 }
 
 function toSlotCharacter(character, slotNumber) {
+  const categories = CharacterCatalog.categoriesOf(character);
   return {
     number: slotNumber,
     name: character.name,
-    category: character.category || null,
+    categories,
+    category: categories.length ? CharacterCatalog.formatCategories(categories) : null,
     description: character.description || null,
   };
 }
@@ -806,10 +1047,14 @@ function applyCharactersToBoxes(slotCharacters) {
       return;
     }
 
+    const categories = CharacterCatalog.categoriesOf(character);
     const slotData = {
       number: slotNumber,
       name: character.name,
-      category: character.category || null,
+      categories,
+      category: categories.length
+        ? CharacterCatalog.formatCategories(categories)
+        : null,
       description: character.description || null,
     };
 
