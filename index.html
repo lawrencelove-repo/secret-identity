@@ -384,6 +384,20 @@
       aria-modal="true"
       aria-label="Score entry"
     >
+      <div class="score-module__marks" aria-label="Keys">
+        <span
+          class="score-module__gold-key"
+          aria-hidden="true"
+          title="Gold key"
+        ></span>
+        <div
+          class="score-module__mark-keys"
+          id="score-module-marks"
+          aria-live="polite"
+          aria-label="Marked opponent keys"
+        ></div>
+      </div>
+
       <div class="score-module__selected">
         <div class="score-module__hero" id="score-module-hero"></div>
         <div class="score-module__overlay">

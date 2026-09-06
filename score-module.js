@@ -11,6 +11,7 @@ const ScoreModule = (() => {
   const nameEditEl = document.getElementById("score-module-name-edit");
   const nameInputEl = document.getElementById("score-module-name-input");
   const pointsEl = document.getElementById("score-module-points");
+  const marksEl = document.getElementById("score-module-marks");
   const othersEl = document.getElementById("score-module-others");
   const resetConfirmEl = document.getElementById("score-reset-confirm");
 
@@ -18,7 +19,7 @@ const ScoreModule = (() => {
   let selectedColor = null;
   let roundNumber = 1;
   let draftScore = 0;
-  /** @type {Set<string>} */
+  /** @type {Set<string>} insertion order = left → right (newest on the right) */
   let draftMarks = new Set();
   let editingName = false;
   let nameEditOriginal = "";
@@ -47,6 +48,19 @@ const ScoreModule = (() => {
     );
   }
 
+  function renderMarks() {
+    if (!marksEl) return;
+    marksEl.replaceChildren();
+
+    [...draftMarks].forEach((color) => {
+      const key = document.createElement("span");
+      key.className = `score-module__mark-key box--${color}`;
+      key.setAttribute("aria-hidden", "true");
+      key.title = RoundModule.getPlayerName(color);
+      marksEl.appendChild(key);
+    });
+  }
+
   function renderOthers() {
     if (!othersEl || !selectedColor) return;
     othersEl.replaceChildren();
@@ -70,6 +84,7 @@ const ScoreModule = (() => {
   function render() {
     renderHero();
     renderPoints();
+    renderMarks();
     renderOthers();
   }
 
