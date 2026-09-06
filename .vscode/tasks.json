@@ -17,7 +17,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".",
-          "endsPattern": "Serving HTTP"
+          "endsPattern": "Serving http"
         }
       },
       "presentation": {
