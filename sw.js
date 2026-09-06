@@ -1,11 +1,12 @@
 /* Minimal offline cache for Secret Identity PWA */
-const CACHE_NAME = "secret-identity-v1";
+const CACHE_NAME = "secret-identity-v5";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./viewport.js",
   "./settings.js",
+  "./settings-module.js",
   "./characters.js",
   "./character-module.js",
   "./character-specify-module.js",
@@ -22,6 +23,16 @@ const ASSETS = [
   "./assets/favicon/android-chrome-192x192.png",
   "./assets/favicon/android-chrome-512x512.png",
   "./assets/bg.png",
+  "./assets/all-keys.PNG",
+  "./assets/keys/gold.png",
+  "./assets/keys/green.png",
+  "./assets/keys/red.png",
+  "./assets/keys/pink.png",
+  "./assets/keys/grey.png",
+  "./assets/keys/yellow.png",
+  "./assets/keys/white.png",
+  "./assets/keys/purple.png",
+  "./assets/keys/light-blue.png",
 ];
 
 self.addEventListener("install", (event) => {

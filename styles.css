@@ -1801,8 +1801,11 @@ body.score-module-open {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(92vw, 560px);
+  width: fit-content;
+  min-width: min(92vw, 560px);
+  max-width: min(96vw, 52rem);
   padding: clamp(1.5rem, 3.5vw, 2.25rem);
+  box-sizing: border-box;
   background:
     linear-gradient(
       to bottom,
@@ -1817,6 +1820,7 @@ body.score-module-open {
 
 .score-module__selected {
   position: relative;
+  align-self: stretch;
   width: 100%;
   margin-bottom: 1.35rem;
 }
@@ -2024,6 +2028,57 @@ body.score-module-open {
   background: rgba(255, 255, 255, 0.28);
 }
 
+.score-module__marks {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 0.35rem;
+  align-self: stretch;
+  width: 100%;
+  margin-bottom: 0;
+  line-height: 0;
+}
+
+.score-module__gold-key {
+  flex: 0 0 auto;
+  height: clamp(3.888rem, 10.26vw, 5.238rem);
+  aspect-ratio: 895 / 965;
+  width: auto;
+  background-color: transparent;
+  background-image: url("assets/keys/gold.png");
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.score-module__mark-keys {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.score-module__mark-key {
+  flex: 0 0 auto;
+  width: clamp(3.24rem, 8.55vw, 4.365rem);
+  height: clamp(3.24rem, 8.55vw, 4.365rem);
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
 .score-module__others {
   display: flex;
   flex-direction: row;
@@ -2082,6 +2137,7 @@ body.score-module-open {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.65rem;
+  align-self: stretch;
   width: 100%;
 }
 
@@ -2186,7 +2242,7 @@ body.score-module-open {
   gap: 0.65rem;
 }
 
-/* Named colors for score module tiles */
+/* Score module: hero + opponent squares use flat colors; marked keys use sprites */
 .score-module__hero.box--light-blue,
 .score-module__other.box--light-blue { --box-color: var(--color-light-blue); }
 .score-module__hero.box--purple,
@@ -2203,6 +2259,15 @@ body.score-module-open {
 .score-module__other.box--red { --box-color: var(--color-red); }
 .score-module__hero.box--green,
 .score-module__other.box--green { --box-color: var(--color-green); }
+
+.score-module__mark-key.box--green { background-image: url("assets/keys/green.png"); }
+.score-module__mark-key.box--red { background-image: url("assets/keys/red.png"); }
+.score-module__mark-key.box--pink { background-image: url("assets/keys/pink.png"); }
+.score-module__mark-key.box--grey { background-image: url("assets/keys/grey.png"); }
+.score-module__mark-key.box--yellow { background-image: url("assets/keys/yellow.png"); }
+.score-module__mark-key.box--white { background-image: url("assets/keys/white.png"); }
+.score-module__mark-key.box--purple { background-image: url("assets/keys/purple.png"); }
+.score-module__mark-key.box--light-blue { background-image: url("assets/keys/light-blue.png"); }
 
 /* ============================================================
    New game module
