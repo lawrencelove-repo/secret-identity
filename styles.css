@@ -2043,7 +2043,7 @@ body.score-module-open {
 
 .score-module__gold-key {
   flex: 0 0 auto;
-  height: clamp(3.888rem, 10.26vw, 5.238rem);
+  height: clamp(3.24rem, 8.55vw, 4.365rem);
   aspect-ratio: 895 / 965;
   width: auto;
   background-color: transparent;
