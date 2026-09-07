@@ -283,6 +283,7 @@
           <h2 class="character-module__name" id="character-module-name"></h2>
           <p class="character-module__meta character-module__category" id="character-module-category" hidden></p>
           <p class="character-module__meta character-module__description" id="character-module-description" hidden></p>
+          <p class="character-module__blurb" id="character-module-long-description" hidden></p>
         </div>
         <button
           type="button"
@@ -838,8 +839,17 @@
           </div>
 
           <label class="character-edit-module__field">
-            <span>Description</span>
+            <span>Description (short)</span>
             <input name="description" type="text" autocomplete="off" />
+          </label>
+          <label class="character-edit-module__field">
+            <span>Long description (clue help)</span>
+            <textarea
+              name="longDescription"
+              class="character-edit-module__textarea"
+              rows="3"
+              autocomplete="off"
+            ></textarea>
           </label>
           <label class="character-edit-module__field">
             <span>Play count (this device)</span>

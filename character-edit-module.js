@@ -51,7 +51,9 @@ const CharacterEditModule = (() => {
     const categoryText = CharacterCatalog.formatCategories(
       CharacterCatalog.categoriesOf(row)
     );
-    const hay = `${row.name} ${categoryText} ${row.description || ""}`.toLowerCase();
+    const hay = `${row.name} ${categoryText} ${row.description || ""} ${
+      row.longDescription || ""
+    }`.toLowerCase();
     return hay.includes(filterText);
   }
 
@@ -310,6 +312,8 @@ const CharacterEditModule = (() => {
     formEl.querySelector("[name=name]").value = row.name || "";
     setDraftCategories(CharacterCatalog.categoriesOf(row));
     formEl.querySelector("[name=description]").value = row.description || "";
+    const longEl = formEl.querySelector("[name=longDescription]");
+    if (longEl) longEl.value = row.longDescription || "";
     formEl.querySelector("[name=plays]").value = String(CharacterHistory.getCount(row.name));
     formEl.querySelector("[name=disabled]").checked = Boolean(row.disabled);
     const removeBtn = formEl.querySelector("[data-character-edit-remove]");
@@ -329,6 +333,7 @@ const CharacterEditModule = (() => {
       name: formEl.querySelector("[name=name]").value,
       categories: draftCategories.length ? [...draftCategories] : ["Celebrity"],
       description: formEl.querySelector("[name=description]").value,
+      longDescription: formEl.querySelector("[name=longDescription]")?.value || "",
       plays: Number(formEl.querySelector("[name=plays]").value),
       disabled: formEl.querySelector("[name=disabled]").checked,
     };
@@ -363,6 +368,8 @@ const CharacterEditModule = (() => {
     setCategoryCloudOpen(false);
     setCategoryManageOpen(false);
     formEl.querySelector("[name=description]").value = "";
+    const longEl = formEl.querySelector("[name=longDescription]");
+    if (longEl) longEl.value = "";
     formEl.querySelector("[name=plays]").value = "0";
     formEl.querySelector("[name=disabled]").checked = false;
     const removeBtn = formEl.querySelector("[data-character-edit-remove]");

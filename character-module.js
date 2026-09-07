@@ -9,6 +9,7 @@ const CharacterModule = (() => {
   const nameEl = document.getElementById("character-module-name");
   const categoryEl = document.getElementById("character-module-category");
   const descriptionEl = document.getElementById("character-module-description");
+  const longDescriptionEl = document.getElementById("character-module-long-description");
   const replaceBtn = root?.querySelector("[data-character-module-replace]");
   const specifyBtn = root?.querySelector("[data-character-module-specify]");
   const confirmEl = document.getElementById("character-replace-confirm");
@@ -50,6 +51,7 @@ const CharacterModule = (() => {
     nameEl.textContent = character.name;
     setMeta(categoryEl, character.category || null);
     setMeta(descriptionEl, character.description || null);
+    setMeta(longDescriptionEl, character.longDescription || null);
     updateActionButtons();
   }
 

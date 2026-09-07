@@ -1676,6 +1676,23 @@ body.character-module-open {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.character-module__blurb {
+  margin: 0.85rem 0 0;
+  max-width: 42ch;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.95rem, 2.3vw, 1.15rem);
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  text-align: center;
+}
+
+.character-module__blurb[hidden] {
+  display: none;
+}
+
 .character-module__ok {
   margin-top: 1.75rem;
   min-width: 8rem;
@@ -2805,6 +2822,27 @@ body.character-edit-module-open {
 }
 
 .character-edit-module__field input:focus {
+  border-color: rgba(255, 255, 255, 0.65);
+  outline: none;
+}
+
+.character-edit-module__textarea {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  background: rgba(8, 8, 8, 0.72);
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.character-edit-module__textarea:focus {
   border-color: rgba(255, 255, 255, 0.65);
   outline: none;
 }
