@@ -746,25 +746,54 @@
               id="character-edit-category-chips"
               aria-live="polite"
             ></div>
-            <div class="character-edit-module__category-add">
-              <select
-                id="character-edit-category-pick"
-                class="character-edit-module__category-pick"
-                aria-label="Add category"
-              >
-                <option value="">Add category…</option>
-              </select>
-              <button
-                type="button"
-                class="character-edit-module__btn"
-                data-add-category
-              >
-                Add
-              </button>
-            </div>
+            <button
+              type="button"
+              class="character-edit-module__btn"
+              data-open-category-cloud
+            >
+              Choose categories
+            </button>
             <p class="character-edit-module__field-hint">
               Shown as Singer/Actor when more than one is selected.
             </p>
+          </div>
+
+          <div
+            class="character-edit-module__cloud"
+            id="character-edit-category-cloud"
+            hidden
+            aria-hidden="true"
+          >
+            <div class="character-edit-module__cloud-backdrop" data-category-cloud-close></div>
+            <div
+              class="character-edit-module__cloud-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="character-edit-category-cloud-title"
+            >
+              <div class="character-edit-module__cloud-head">
+                <h3
+                  class="character-edit-module__cloud-title"
+                  id="character-edit-category-cloud-title"
+                >
+                  Choose categories
+                </h3>
+                <button
+                  type="button"
+                  class="character-edit-module__link-btn"
+                  data-category-cloud-close
+                >
+                  Done
+                </button>
+              </div>
+              <p class="character-edit-module__field-hint">
+                Tap chips to select or deselect. Multiple categories allowed.
+              </p>
+              <div
+                class="character-edit-module__cloud-chips"
+                id="character-edit-category-cloud-chips"
+              ></div>
+            </div>
           </div>
 
           <div

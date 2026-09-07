@@ -2910,7 +2910,100 @@ body.character-edit-module-open {
   outline: none;
 }
 
-.character-edit-module__category-add,
+.character-edit-module__cloud {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.character-edit-module__cloud[hidden] {
+  display: none;
+}
+
+.character-edit-module__cloud-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.character-edit-module__cloud-dialog {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: min(100%, 34rem);
+  max-height: min(70vh, 28rem);
+  padding: 1rem 1.1rem 1.15rem;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.06) 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.35) 100%
+    ),
+    #181818;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.character-edit-module__cloud-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.character-edit-module__cloud-title {
+  margin: 0;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.character-edit-module__cloud-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-content: flex-start;
+  overflow: auto;
+  min-height: 8rem;
+  padding: 0.15rem;
+}
+
+.character-edit-module__cloud-chip {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.character-edit-module__cloud-chip:hover,
+.character-edit-module__cloud-chip:focus-visible {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.character-edit-module__cloud-chip.is-selected {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: var(--color-number-badge);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
 .character-edit-module__manage-add {
   display: flex;
   flex-wrap: wrap;
@@ -2918,7 +3011,6 @@ body.character-edit-module-open {
   align-items: center;
 }
 
-.character-edit-module__category-pick,
 .character-edit-module__manage-input {
   flex: 1 1 10rem;
   min-width: 0;
@@ -2932,7 +3024,6 @@ body.character-edit-module-open {
   font-weight: 600;
 }
 
-.character-edit-module__category-pick:focus,
 .character-edit-module__manage-input:focus {
   border-color: rgba(255, 255, 255, 0.65);
   outline: none;

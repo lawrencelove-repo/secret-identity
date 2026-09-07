@@ -19,7 +19,10 @@ const CharacterEditModule = (() => {
   let draftCategories = [];
 
   const chipsEl = document.getElementById("character-edit-category-chips");
-  const categoryPickEl = document.getElementById("character-edit-category-pick");
+  const categoryCloudEl = document.getElementById("character-edit-category-cloud");
+  const categoryCloudChipsEl = document.getElementById(
+    "character-edit-category-cloud-chips"
+  );
   const categoryManageEl = document.getElementById("character-edit-category-manage");
   const categoryManageListEl = document.getElementById("character-edit-category-manage-list");
   const categoryNewEl = document.getElementById("character-edit-category-new");
@@ -75,33 +78,12 @@ const CharacterEditModule = (() => {
       categoryFilterEl.value = filterCategory;
     }
 
-    renderCategoryPick();
+    if (categoryCloudEl && !categoryCloudEl.hidden) {
+      renderCategoryCloud();
+    }
     if (categoryManageEl && !categoryManageEl.hidden) {
       renderCategoryManageList();
     }
-  }
-
-  function renderCategoryPick() {
-    if (!categoryPickEl) return;
-    const selected = new Set(draftCategories.map((item) => item.toLowerCase()));
-    const available = CategoryCatalog.list().filter(
-      (category) => !selected.has(category.toLowerCase())
-    );
-
-    categoryPickEl.replaceChildren();
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = available.length ? "Add category…" : "All categories added";
-    categoryPickEl.appendChild(placeholder);
-
-    available.forEach((category) => {
-      const option = document.createElement("option");
-      option.value = category;
-      option.textContent = category;
-      categoryPickEl.appendChild(option);
-    });
-
-    categoryPickEl.disabled = available.length === 0;
   }
 
   function renderCategoryChips() {
@@ -113,7 +95,6 @@ const CharacterEditModule = (() => {
       empty.className = "character-edit-module__chips-empty";
       empty.textContent = "No categories yet";
       chipsEl.appendChild(empty);
-      renderCategoryPick();
       return;
     }
 
@@ -126,8 +107,44 @@ const CharacterEditModule = (() => {
       chip.innerHTML = `<span>${escapeHtml(category)}</span><span aria-hidden="true">×</span>`;
       chipsEl.appendChild(chip);
     });
+  }
 
-    renderCategoryPick();
+  function renderCategoryCloud() {
+    if (!categoryCloudChipsEl) return;
+    categoryCloudChipsEl.replaceChildren();
+    const selected = new Set(draftCategories.map((item) => item.toLowerCase()));
+    const categories = CategoryCatalog.list().sort((a, b) => a.localeCompare(b));
+
+    if (!categories.length) {
+      const empty = document.createElement("p");
+      empty.className = "character-edit-module__chips-empty";
+      empty.textContent = "No categories yet — use Manage list to add some.";
+      categoryCloudChipsEl.appendChild(empty);
+      return;
+    }
+
+    categories.forEach((category) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "character-edit-module__cloud-chip";
+      chip.dataset.toggleCategory = category;
+      chip.setAttribute("aria-pressed", selected.has(category.toLowerCase()) ? "true" : "false");
+      if (selected.has(category.toLowerCase())) {
+        chip.classList.add("is-selected");
+      }
+      chip.textContent = category;
+      categoryCloudChipsEl.appendChild(chip);
+    });
+  }
+
+  function setCategoryCloudOpen(openCloud) {
+    if (!categoryCloudEl) return;
+    categoryCloudEl.hidden = !openCloud;
+    categoryCloudEl.setAttribute("aria-hidden", openCloud ? "false" : "true");
+    if (openCloud) {
+      renderCategoryCloud();
+      categoryCloudEl.querySelector("[data-category-cloud-close]")?.focus();
+    }
   }
 
   function setDraftCategories(categories) {
@@ -137,6 +154,9 @@ const CharacterEditModule = (() => {
       draftCategories = CharacterCatalog.normalizeCategories(categories);
     }
     renderCategoryChips();
+    if (categoryCloudEl && !categoryCloudEl.hidden) {
+      renderCategoryCloud();
+    }
   }
 
   function addDraftCategory(category) {
@@ -145,6 +165,9 @@ const CharacterEditModule = (() => {
     if (draftCategories.some((item) => item.toLowerCase() === label.toLowerCase())) return;
     draftCategories = [...draftCategories, label];
     renderCategoryChips();
+    if (categoryCloudEl && !categoryCloudEl.hidden) {
+      renderCategoryCloud();
+    }
   }
 
   function removeDraftCategory(category) {
@@ -152,10 +175,24 @@ const CharacterEditModule = (() => {
       (item) => item.toLowerCase() !== String(category).toLowerCase()
     );
     renderCategoryChips();
+    if (categoryCloudEl && !categoryCloudEl.hidden) {
+      renderCategoryCloud();
+    }
+  }
+
+  function toggleDraftCategory(category) {
+    const label = String(category || "").trim();
+    if (!label) return;
+    if (draftCategories.some((item) => item.toLowerCase() === label.toLowerCase())) {
+      removeDraftCategory(label);
+    } else {
+      addDraftCategory(label);
+    }
   }
 
   function setCategoryManageOpen(openManage) {
     if (!categoryManageEl || !categoriesFieldEl) return;
+    if (openManage) setCategoryCloudOpen(false);
     categoryManageEl.hidden = !openManage;
     categoriesFieldEl.hidden = openManage;
     if (openManage) {
@@ -263,6 +300,7 @@ const CharacterEditModule = (() => {
   function loadForm(row) {
     if (!formEl) return;
     formEl.hidden = !row;
+    setCategoryCloudOpen(false);
     setCategoryManageOpen(false);
     if (!row) {
       selectedKey = null;
@@ -322,6 +360,7 @@ const CharacterEditModule = (() => {
     formEl.hidden = false;
     formEl.querySelector("[name=name]").value = "";
     setDraftCategories([]);
+    setCategoryCloudOpen(false);
     setCategoryManageOpen(false);
     formEl.querySelector("[name=description]").value = "";
     formEl.querySelector("[name=plays]").value = "0";
@@ -398,6 +437,7 @@ const CharacterEditModule = (() => {
     formEl.hidden = true;
     formEl.dataset.mode = "edit";
     setDraftCategories([]);
+    setCategoryCloudOpen(false);
     setCategoryManageOpen(false);
     fillCategoryOptions();
     renderList();
@@ -410,6 +450,7 @@ const CharacterEditModule = (() => {
 
   function close() {
     if (!root || root.hidden) return;
+    setCategoryCloudOpen(false);
     setCategoryManageOpen(false);
     root.hidden = true;
     root.setAttribute("aria-hidden", "true");
@@ -462,12 +503,17 @@ const CharacterEditModule = (() => {
       fillCategoryOptions();
       return;
     }
-    if (event.target.closest("[data-add-category]")) {
-      const value = categoryPickEl?.value;
-      if (value) {
-        addDraftCategory(value);
-        if (categoryPickEl) categoryPickEl.value = "";
-      }
+    if (event.target.closest("[data-open-category-cloud]")) {
+      setCategoryCloudOpen(true);
+      return;
+    }
+    if (event.target.closest("[data-category-cloud-close]")) {
+      setCategoryCloudOpen(false);
+      return;
+    }
+    const cloudChip = event.target.closest("[data-toggle-category]");
+    if (cloudChip?.dataset.toggleCategory) {
+      toggleDraftCategory(cloudChip.dataset.toggleCategory);
       return;
     }
     const removeChip = event.target.closest("[data-remove-category]");
@@ -536,13 +582,6 @@ const CharacterEditModule = (() => {
     }
   });
 
-  categoryPickEl?.addEventListener("change", () => {
-    const value = categoryPickEl.value;
-    if (!value) return;
-    addDraftCategory(value);
-    categoryPickEl.value = "";
-  });
-
   searchEl?.addEventListener("input", () => {
     filterText = searchEl.value.trim().toLowerCase();
     renderList();
@@ -587,6 +626,10 @@ const CharacterEditModule = (() => {
     if (event.key !== "Escape") return;
     if (clearConfirmEl && !clearConfirmEl.hidden) {
       closeClearConfirm();
+      return;
+    }
+    if (categoryCloudEl && !categoryCloudEl.hidden) {
+      setCategoryCloudOpen(false);
       return;
     }
     if (categoryManageEl && !categoryManageEl.hidden) {
