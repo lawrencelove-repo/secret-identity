@@ -1162,6 +1162,9 @@ const CharactersFullscreen = (() => {
   }
 
   function setActive(active) {
+    if (active && typeof BoardModule !== "undefined") {
+      BoardModule.setActive(false);
+    }
     document.body.classList.toggle("characters-fullscreen", Boolean(active));
     if (!active) {
       document.body.classList.remove("characters-flip");
@@ -1183,7 +1186,12 @@ const CharactersFullscreen = (() => {
   function showToggle(visible) {
     if (!controls) return;
     controls.hidden = !visible;
-    if (!visible) setActive(false);
+    if (!visible) {
+      setActive(false);
+      if (typeof BoardModule !== "undefined") {
+        BoardModule.setActive(false);
+      }
+    }
   }
 
   toggle?.addEventListener("click", (event) => {
@@ -1202,6 +1210,7 @@ const CharactersFullscreen = (() => {
       if (document.body.classList.contains("character-module-open")) return;
       if (document.body.classList.contains("score-module-open")) return;
       if (document.body.classList.contains("new-game-module-open")) return;
+      if (document.body.classList.contains("board-module-open")) return;
       if (document.getElementById("character-replace-confirm") && !document.getElementById("character-replace-confirm").hidden) {
         return;
       }

@@ -114,6 +114,9 @@ const NewGameModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.setActive(false);
+    }
     render();
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");

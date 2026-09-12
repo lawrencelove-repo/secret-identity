@@ -76,6 +76,19 @@
         <path d="m7 16 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
+    <button
+      type="button"
+      class="characters-view-btn"
+      id="board-module-toggle"
+      aria-label="Open game board"
+      aria-pressed="false"
+    >
+      <svg class="characters-view-btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.75" />
+        <path d="M8 16v-6.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1V16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+        <path d="M8 16h8" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+      </svg>
+    </button>
   </div>
 
   <main class="stage" aria-label="Game board">
@@ -912,6 +925,88 @@
     </div>
   </div>
 
+  <!-- Physical scoring board (fullscreen view, toggled like characters fullscreen) -->
+  <div
+    class="board-module"
+    id="board-module"
+    hidden
+    aria-hidden="true"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Game board"
+  >
+    <div class="board-module__stage">
+      <div class="board-module__canvas">
+      <div class="board-module__assembly">
+        <!-- Character cards around the perimeter (slots 1–8) -->
+        <button type="button" class="board-card board-card--1" data-board-slot="1" aria-label="Slot 1">
+          <span class="board-card__badge" aria-hidden="true">1</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--2" data-board-slot="2" aria-label="Slot 2">
+          <span class="board-card__badge" aria-hidden="true">2</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--3" data-board-slot="3" aria-label="Slot 3">
+          <span class="board-card__badge" aria-hidden="true">3</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--4" data-board-slot="4" aria-label="Slot 4">
+          <span class="board-card__badge" aria-hidden="true">4</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--5" data-board-slot="5" aria-label="Slot 5">
+          <span class="board-card__badge" aria-hidden="true">5</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--6" data-board-slot="6" aria-label="Slot 6">
+          <span class="board-card__badge" aria-hidden="true">6</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--7" data-board-slot="7" aria-label="Slot 7">
+          <span class="board-card__badge" aria-hidden="true">7</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+        <button type="button" class="board-card board-card--8" data-board-slot="8" aria-label="Slot 8">
+          <span class="board-card__badge" aria-hidden="true">8</span>
+          <div class="board-card__body">
+            <span class="board-card__name board-card__name--a"></span>
+            <span class="board-card__name board-card__name--b"></span>
+          </div>
+        </button>
+
+        <div class="board-module__frame">
+          <div class="board-module__track-wrap">
+            <div class="board-track" id="board-track" aria-label="Scoring track 0 to 30"></div>
+            <div class="board-cubes" id="board-cubes" aria-label="Player scores"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
   <script src="viewport.js"></script>
   <script src="settings.js"></script>
   <script src="settings-module.js"></script>
@@ -923,6 +1018,7 @@
   <script src="winner-module.js"></script>
   <script src="new-game-module.js"></script>
   <script src="character-edit-module.js"></script>
+  <script src="board-module.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

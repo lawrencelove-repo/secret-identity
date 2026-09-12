@@ -610,6 +610,10 @@ const RoundModule = (() => {
       renderScoreboard(roundNumber);
       document.body.classList.remove("round-reviewing");
     }
+
+    if (typeof BoardModule !== "undefined" && BoardModule.isActive()) {
+      BoardModule.refresh();
+    }
   }
 
   function openConfirm(targetRound) {
@@ -830,6 +834,9 @@ const RoundModule = (() => {
     winnerAnnounced = true;
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
+    }
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.setActive(false);
     }
     if (typeof WinnerModule !== "undefined") {
       WinnerModule.open(getPodium());

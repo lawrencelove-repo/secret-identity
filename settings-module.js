@@ -32,6 +32,9 @@ const SettingsModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.setActive(false);
+    }
     syncInputs();
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");

@@ -435,6 +435,9 @@ const CharacterEditModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.setActive(false);
+    }
     closeMenu();
     filterText = "";
     filterCategory = "";
