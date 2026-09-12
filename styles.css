@@ -1216,6 +1216,12 @@ body.settings-module-open {
   gap: 0.5rem;
 }
 
+@media (orientation: landscape) {
+  .characters-view-controls {
+    flex-direction: column;
+  }
+}
+
 .characters-view-controls[hidden] {
   display: none;
 }
