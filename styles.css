@@ -1479,30 +1479,6 @@ body.character-module-open {
   text-align: center;
 }
 
-.character-module__close {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.75rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.75);
-  font-family: "Oswald", "Arial Narrow", sans-serif;
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.character-module__close:hover,
-.character-module__close:focus-visible {
-  color: #fff;
-}
-
 .character-module__replace {
   position: absolute;
   top: 0.65rem;
