@@ -606,6 +606,42 @@
           <input type="checkbox" data-setting-allow-random />
           <span class="settings-module__switch-ui" aria-hidden="true"></span>
         </label>
+        <div class="settings-module__control">
+          <div class="settings-module__switch-text">
+            <span class="settings-module__switch-label" id="settings-text-scale-label">Text size</span>
+            <span class="settings-module__switch-hint">
+              Scale board and character text. Current size is 100%.
+            </span>
+          </div>
+          <div class="settings-module__text-scale">
+            <span class="settings-module__text-scale-edge" aria-hidden="true">A</span>
+            <input
+              type="range"
+              class="settings-module__text-scale-input"
+              min="0"
+              max="4"
+              step="1"
+              value="2"
+              list="settings-text-scale-ticks"
+              data-setting-text-scale
+              aria-labelledby="settings-text-scale-label"
+              aria-describedby="settings-text-scale-value"
+            />
+            <datalist id="settings-text-scale-ticks">
+              <option value="0" label="80%"></option>
+              <option value="1" label="90%"></option>
+              <option value="2" label="100%"></option>
+              <option value="3" label="110%"></option>
+              <option value="4" label="120%"></option>
+            </datalist>
+            <span class="settings-module__text-scale-edge settings-module__text-scale-edge--lg" aria-hidden="true">A</span>
+            <span
+              class="settings-module__text-scale-value"
+              id="settings-text-scale-value"
+              data-setting-text-scale-value
+            >100%</span>
+          </div>
+        </div>
       </div>
       <div class="settings-module__actions">
         <button type="button" class="settings-module__btn" data-settings-close>
