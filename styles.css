@@ -711,6 +711,132 @@ body.is-boot .stage {
 }
 
 /* ============================================================
+   Portrait — fill the viewport; stretch character rows for larger type
+   ============================================================ */
+@media (orientation: portrait) {
+  body {
+    align-items: stretch;
+    height: var(--app-height);
+    min-height: var(--app-height);
+    overflow: hidden;
+  }
+
+  .stage {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .columns {
+    gap: 3.25%;
+    padding: 1.1% 2.4% 1.4%;
+  }
+
+  .column--left {
+    flex: 1.2 1 0;
+    min-width: 0;
+    gap: 0.75%;
+    /* Clear the fixed fullscreen / board controls in the bottom-left */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem);
+  }
+
+  .column--right {
+    flex: 0 0 auto;
+    min-width: 0;
+    height: 100%;
+    padding-top: 0;
+    align-self: stretch;
+    justify-content: center;
+  }
+
+  .column__boxes {
+    gap: 0.65%;
+    justify-content: space-between;
+  }
+
+  .round-indicator {
+    width: 100%;
+    padding-bottom: 0.55%;
+  }
+
+  /* Shrink-wrap the metal rack to the seats (landscape proportions) */
+  .players-panel {
+    flex: 0 0 auto;
+    width: calc(960 / 2360 * 100cqw + 36px);
+    max-width: 100%;
+    height: auto;
+    min-height: 0;
+    gap: calc(152 / 2360 * 100cqw * 0.4);
+    padding: 14px 18px;
+    justify-content: flex-start;
+  }
+
+  .players-panel .box {
+    width: calc(960 / 2360 * 100cqw);
+    height: calc(152 / 2360 * 100cqw);
+    flex: 0 0 auto;
+  }
+
+  .players-panel .box__player-name {
+    font-size: calc(36 / 2360 * 100cqw);
+  }
+
+  .players-panel .box__player-points {
+    font-size: calc(52 / 2360 * 100cqw);
+  }
+
+  .players-panel .box__tabulated {
+    width: 30px;
+  }
+
+  .players-panel .box.is-tabulated .box__score {
+    padding-right: calc(30px + 6%);
+  }
+
+  .players-panel .box::before,
+  .players-panel .box::after {
+    width: calc(20 / 2360 * 100cqw);
+    height: calc(20 / 2360 * 100cqw);
+    margin-top: calc(20 / 2360 * -50cqw);
+  }
+
+  /* Stretch character rows only */
+  .column__boxes .box {
+    width: 100%;
+    height: auto;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .column__boxes .box__number {
+    width: clamp(1.85rem, 6.2cqh, 3.35rem);
+    height: clamp(1.85rem, 6.2cqh, 3.35rem);
+    margin-top: calc(clamp(1.85rem, 6.2cqh, 3.35rem) / -2);
+    font-size: clamp(0.95rem, 3.1cqh, 1.65rem);
+  }
+
+  .column__boxes .box__name {
+    font-size: clamp(1.2rem, 4.5cqh, 2.4rem);
+  }
+
+  .column__boxes .box__qualifier {
+    font-size: clamp(0.72rem, 2.55cqh, 1.35rem);
+  }
+
+  .round-indicator__label {
+    font-size: clamp(1.15rem, 3.7cqh, 2.05rem);
+  }
+
+  .round-indicator__num {
+    width: clamp(1.55rem, 4.3cqh, 2.45rem);
+    height: clamp(1.55rem, 4.3cqh, 2.45rem);
+    font-size: clamp(0.85rem, 2.7cqh, 1.4rem);
+  }
+}
+
+/* ============================================================
    App hamburger menu
    ============================================================ */
 .app-menu {
