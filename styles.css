@@ -2061,6 +2061,7 @@ body.score-module-open {
 }
 
 .score-module__mark-key {
+  position: relative;
   flex: 0 0 auto;
   width: clamp(3.24rem, 8.55vw, 4.365rem);
   height: clamp(3.24rem, 8.55vw, 4.365rem);
@@ -2070,6 +2071,29 @@ body.score-module-open {
   background-size: contain;
   pointer-events: none;
   user-select: none;
+}
+
+/* "+1" centered in the key bow/head */
+.score-module__mark-key::after {
+  content: "+1";
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.95rem, 2.6vw, 1.35rem);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.score-module__mark-key.box--white::after,
+.score-module__mark-key.box--yellow::after {
+  color: #1a1a1a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .score-module__others {

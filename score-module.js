@@ -33,7 +33,7 @@ const ScoreModule = (() => {
   }
 
   function renderPoints() {
-    if (pointsEl) pointsEl.textContent = String(draftScore);
+    if (pointsEl) pointsEl.textContent = `+${draftScore}`;
   }
 
   function renderHero() {
@@ -44,7 +44,7 @@ const ScoreModule = (() => {
     if (nameEl && !editingName) nameEl.textContent = playerName;
     heroEl.setAttribute(
       "aria-label",
-      `${playerName} — ${draftScore} points`
+      `${playerName} — +${draftScore} points`
     );
   }
 
