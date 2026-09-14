@@ -805,8 +805,8 @@ body.is-boot .stage {
     margin-top: calc(20 / 2360 * -50cqw);
   }
 
-  /* Stretch character rows only */
   .column__boxes .box {
+    --box-number-size: clamp(1.85rem, 6.2cqh, 3.35rem);
     width: 100%;
     height: auto;
     flex: 1 1 0;
@@ -814,10 +814,15 @@ body.is-boot .stage {
   }
 
   .column__boxes .box__number {
-    width: clamp(1.85rem, 6.2cqh, 3.35rem);
-    height: clamp(1.85rem, 6.2cqh, 3.35rem);
-    margin-top: calc(clamp(1.85rem, 6.2cqh, 3.35rem) / -2);
+    width: var(--box-number-size);
+    height: var(--box-number-size);
+    margin-top: calc(var(--box-number-size) / -2);
     font-size: calc(clamp(0.95rem, 3.1cqh, 1.65rem) * var(--text-scale, 1));
+  }
+
+  .column__boxes .box__character {
+    /* Keep names clear of the height-scaled number badge */
+    padding-left: calc(var(--number-left) + var(--box-number-size) + 0.65rem);
   }
 
   .column__boxes .box__name {
