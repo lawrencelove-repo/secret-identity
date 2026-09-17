@@ -3741,6 +3741,8 @@ body.board-module-open .score-reset-confirm {
   align-items: center;
   justify-content: center;
   transform-origin: 0 0;
+  perspective: 1400px;
+  perspective-origin: 50% 42%;
   will-change: transform;
 }
 
@@ -3752,33 +3754,111 @@ body.board-module-open .score-reset-confirm {
   --card-long: calc(var(--board-size) * 0.30);
   --card-short: calc(var(--board-size) * 0.112);
   --frame-inset: calc(var(--board-size) * 0.155);
+  --board-depth: calc(var(--board-size) * 0.028);
+  --tilt-x: 26deg;
+  --tilt-y: -8deg;
   position: relative;
   width: var(--board-size);
   height: var(--board-size);
   flex-shrink: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transform-origin: center center;
 }
 
 .board-module__frame {
   position: absolute;
   inset: var(--frame-inset);
   z-index: 2;
+  transform-style: preserve-3d;
   background:
     linear-gradient(145deg, #2a2a2c 0%, #121214 45%, #0a0a0c 100%);
   border-radius: 2px;
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.35),
-    0 2px 6px rgba(0, 0, 0, 0.25),
+    0 18px 36px rgba(0, 0, 0, 0.42),
+    0 4px 10px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.board-module__frame-slab {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, #1a1a1c 0%, #08080a 55%, #030304 100%);
+  transform: translateZ(calc(var(--board-depth) * -1));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.85),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.board-module__frame-edge {
+  position: absolute;
+  background:
+    linear-gradient(
+      180deg,
+      #2e2e32 0%,
+      #16161a 45%,
+      #0a0a0c 100%
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.board-module__frame-edge--south {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--board-depth);
+  transform-origin: bottom center;
+  transform: rotateX(90deg);
+}
+
+.board-module__frame-edge--north {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--board-depth);
+  transform-origin: top center;
+  transform: rotateX(-90deg);
+  background:
+    linear-gradient(
+      0deg,
+      #2e2e32 0%,
+      #16161a 45%,
+      #0a0a0c 100%
+    );
+}
+
+.board-module__frame-edge--east {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--board-depth);
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+}
+
+.board-module__frame-edge--west {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--board-depth);
+  transform-origin: left center;
+  transform: rotateY(90deg);
 }
 
 .board-module__track-wrap {
   position: absolute;
   inset: 7%;
+  transform: translateZ(1px);
   border: 1.5px solid rgba(196, 164, 90, 0.55);
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(0, 0, 0, 0.35);
   background: #0e0e10;
+  transform-style: preserve-3d;
 }
 
 .board-track {
@@ -3909,25 +3989,69 @@ body.board-module-open .score-reset-confirm {
   inset: 2.5%;
   pointer-events: none;
   z-index: 5;
+  transform-style: preserve-3d;
 }
 
 .board-cube {
+  --cube-size: 10px;
   position: absolute;
+  width: var(--cube-size);
+  height: var(--cube-size);
+  margin-left: calc(var(--cube-size) / -2);
+  margin-top: calc(var(--cube-size) / -2);
   pointer-events: auto;
   cursor: pointer;
+  transform-style: preserve-3d;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.board-cube__face {
+  position: absolute;
+  inset: 0;
   border-radius: 1px;
-  box-shadow:
-    0.5px 1px 2px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  backface-visibility: hidden;
   background:
     linear-gradient(
       145deg,
-      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.38) 0%,
       transparent 42%,
-      rgba(0, 0, 0, 0.18) 100%
+      rgba(0, 0, 0, 0.22) 100%
     ),
     var(--cube-color);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.board-cube__face--front {
+  transform: translateZ(calc(var(--cube-size) / 2));
+}
+
+.board-cube__face--back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
+  filter: brightness(0.72);
+}
+
+.board-cube__face--right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
+  filter: brightness(0.88);
+}
+
+.board-cube__face--left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
+  filter: brightness(0.8);
+}
+
+.board-cube__face--top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
+  filter: brightness(1.08);
+}
+
+.board-cube__face--bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
+  filter: brightness(0.55);
 }
 
 .board-cube--green { --cube-color: var(--color-green); }
@@ -3954,6 +4078,7 @@ body.board-module-open .score-reset-confirm {
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transform-style: preserve-3d;
 }
 
 .board-card:disabled {
@@ -3982,6 +4107,7 @@ body.board-module-open .score-reset-confirm {
   line-height: 1;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   pointer-events: none;
+  transform: translateZ(6px);
 }
 
 .board-card__body {
@@ -4002,6 +4128,7 @@ body.board-module-open .score-reset-confirm {
     0 1px 3px rgba(0, 0, 0, 0.25);
   color: #fff;
   overflow: hidden;
+  transform: translateZ(4px);
 }
 
 .board-card--empty .board-card__body {
@@ -4027,6 +4154,14 @@ body.board-module-open .score-reset-confirm {
   transform: rotate(180deg);
 }
 
+/* Bottom / top cards tuck under the board frame */
+.board-card--1,
+.board-card--4,
+.board-card--5,
+.board-card--8 {
+  z-index: 1;
+}
+
 /* Bottom edge: slots 1 (left) and 8 (right) — cards extend downward */
 .board-card--1,
 .board-card--8 {
@@ -4043,7 +4178,7 @@ body.board-module-open .score-reset-confirm {
   position: absolute;
   bottom: calc(var(--frame-inset) * 0.38);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(-2px);
 }
 
 /* Badges sit on the black frame, inward from the cards */
@@ -4051,7 +4186,7 @@ body.board-module-open .score-reset-confirm {
 .board-card--8 .board-card__badge {
   top: calc(var(--frame-inset) * 0.18);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(8px);
 }
 
 /* Top edge: slots 4 (left) and 5 (right) — cards extend upward */
@@ -4070,7 +4205,7 @@ body.board-module-open .score-reset-confirm {
   position: absolute;
   top: calc(var(--frame-inset) * 0.38);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(-2px);
 }
 
 .board-card--4 .board-card__badge,
@@ -4078,13 +4213,14 @@ body.board-module-open .score-reset-confirm {
   bottom: calc(var(--frame-inset) * 0.18);
   top: auto;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(8px);
 }
 
 /* Left edge: slots 2 (bottom) and 3 (top) — cards extend leftward */
 .board-card--2,
 .board-card--3 {
   left: 0;
+  z-index: 3;
   width: calc(var(--frame-inset) + var(--card-short) * 0.55);
   height: var(--card-long);
   overflow: visible;
@@ -4100,7 +4236,7 @@ body.board-module-open .score-reset-confirm {
   left: calc(var(--frame-inset) * 0.62);
   width: var(--card-long);
   height: var(--card-short);
-  transform: translate(-50%, -50%) rotate(-90deg);
+  transform: translate(-50%, -50%) rotate(-90deg) translateZ(6px);
   transform-origin: center center;
 }
 
@@ -4109,13 +4245,14 @@ body.board-module-open .score-reset-confirm {
   top: 50%;
   right: calc(var(--frame-inset) * 0.12);
   left: auto;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(10px);
 }
 
 /* Right edge: slots 6 (top) and 7 (bottom) — cards extend rightward */
 .board-card--6,
 .board-card--7 {
   right: 0;
+  z-index: 3;
   width: calc(var(--frame-inset) + var(--card-short) * 0.55);
   height: var(--card-long);
   overflow: visible;
@@ -4132,7 +4269,7 @@ body.board-module-open .score-reset-confirm {
   left: auto;
   width: var(--card-long);
   height: var(--card-short);
-  transform: translate(50%, -50%) rotate(90deg);
+  transform: translate(50%, -50%) rotate(90deg) translateZ(6px);
   transform-origin: center center;
 }
 
@@ -4141,7 +4278,7 @@ body.board-module-open .score-reset-confirm {
   top: 50%;
   left: calc(var(--frame-inset) * 0.12);
   right: auto;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(10px);
 }
 
 /* Keep view controls above the board overlay */

@@ -1,15 +1,22 @@
 /**
  * Board module — physical-style scoring track with character card slots.
  * Opens as a full-viewport view (same control cluster as characters fullscreen).
- * Supports pan (drag) and zoom (wheel / pinch).
+ * Supports pan (drag), zoom (wheel / pinch), and 3-finger tilt on touch.
  */
 const BoardModule = (() => {
   const TRACK_MAX = 30;
   const SLOT_COUNT = 8;
   const MAX_CUBES_PER_CELL = 8;
   const MIN_SCALE = 0.55;
-  const MAX_SCALE = 2.75;
+  const MAX_SCALE = 5.5;
+  const DEFAULT_TILT_X = 26;
+  const DEFAULT_TILT_Y = -8;
+  const MIN_TILT_X = -12;
+  const MAX_TILT_X = 62;
+  const MIN_TILT_Y = -48;
+  const MAX_TILT_Y = 48;
   const PAN_CLICK_THRESHOLD = 6;
+  const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
     yellow: { mid: "#e8c230", light: "#f2d85a", dark: "#c9a018" },
@@ -38,6 +45,7 @@ const BoardModule = (() => {
   const root = document.getElementById("board-module");
   const stageEl = root?.querySelector(".board-module__stage");
   const canvasEl = root?.querySelector(".board-module__canvas");
+  const assemblyEl = root?.querySelector(".board-module__assembly");
   const trackEl = document.getElementById("board-track");
   const cubesEl = document.getElementById("board-cubes");
   const toggle = document.getElementById("board-module-toggle");
@@ -49,11 +57,15 @@ const BoardModule = (() => {
   let scale = 1;
   let panX = 0;
   let panY = 0;
+  let tiltX = DEFAULT_TILT_X;
+  let tiltY = DEFAULT_TILT_Y;
 
   /** @type {{ pointerId: number, startX: number, startY: number, originPanX: number, originPanY: number, moved: boolean, card: Element|null, cube: Element|null } | null} */
   let drag = null;
   /** @type {{ distance: number, scale: number, idA: number, idB: number } | null} */
   let pinch = null;
+  /** @type {{ startX: number, startY: number, originTiltX: number, originTiltY: number } | null} */
+  let tiltGesture = null;
   let suppressCardClick = false;
 
   function isActive() {
@@ -71,15 +83,28 @@ const BoardModule = (() => {
     return Math.min(max, Math.max(min, value));
   }
 
-  function applyTransform() {
+  function applyPanZoom() {
     if (!canvasEl) return;
     canvasEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  }
+
+  function applyTilt() {
+    if (!assemblyEl) return;
+    assemblyEl.style.setProperty("--tilt-x", `${tiltX}deg`);
+    assemblyEl.style.setProperty("--tilt-y", `${tiltY}deg`);
+  }
+
+  function applyTransform() {
+    applyPanZoom();
+    applyTilt();
   }
 
   function resetView() {
     scale = 1;
     panX = 0;
     panY = 0;
+    tiltX = DEFAULT_TILT_X;
+    tiltY = DEFAULT_TILT_Y;
     applyTransform();
   }
 
@@ -94,7 +119,17 @@ const BoardModule = (() => {
     panX = x - ratio * (x - panX);
     panY = y - ratio * (y - panY);
     scale = next;
-    applyTransform();
+    applyPanZoom();
+  }
+
+  function touchCentroid(touches) {
+    let x = 0;
+    let y = 0;
+    for (let i = 0; i < touches.length; i += 1) {
+      x += touches[i].clientX;
+      y += touches[i].clientY;
+    }
+    return { x: x / touches.length, y: y / touches.length };
   }
 
   function hashString(value) {
@@ -315,11 +350,15 @@ const BoardModule = (() => {
           "aria-label",
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
-        cube.style.width = `${size}px`;
-        cube.style.height = `${size}px`;
-        cube.style.marginLeft = `${-size / 2}px`;
-        cube.style.marginTop = `${-size / 2}px`;
-        cube.style.transform = `translate(${layout.x}px, ${layout.y}px) rotate(${layout.rot}deg)`;
+        cube.style.setProperty("--cube-size", `${size}px`);
+        cube.style.transform = `translate3d(${layout.x}px, ${layout.y}px, ${size * 0.55}px) rotateZ(${layout.rot}deg)`;
+
+        CUBE_FACES.forEach((face) => {
+          const faceEl = document.createElement("span");
+          faceEl.className = `board-cube__face board-cube__face--${face}`;
+          faceEl.setAttribute("aria-hidden", "true");
+          cube.appendChild(faceEl);
+        });
 
         const cx =
           ((cellRect.left + cellRect.width / 2 - trackRect.left) / trackRect.width) * 100;
@@ -397,6 +436,7 @@ const BoardModule = (() => {
     } else {
       endDrag();
       pinch = null;
+      tiltGesture = null;
       root.hidden = true;
       root.setAttribute("aria-hidden", "true");
       document.body.classList.remove("board-module-open");
@@ -437,7 +477,7 @@ const BoardModule = (() => {
   function onPointerDown(event) {
     if (!isActive() || !stageEl) return;
     if (event.button != null && event.button !== 0) return;
-    if (pinch) return;
+    if (pinch || tiltGesture) return;
 
     suppressCardClick = false;
     const fromTargetCube = cubeFromEventTarget(event.target);
@@ -461,7 +501,7 @@ const BoardModule = (() => {
   function onPointerMove(event) {
     if (!isActive()) return;
 
-    if (pinch && event.pointerType === "touch") {
+    if ((pinch || tiltGesture) && event.pointerType === "touch") {
       return;
     }
 
@@ -482,7 +522,7 @@ const BoardModule = (() => {
 
     panX = drag.originPanX + dx;
     panY = drag.originPanY + dy;
-    applyTransform();
+    applyPanZoom();
   }
 
   function onPointerUp(event) {
@@ -492,6 +532,11 @@ const BoardModule = (() => {
       if (event.pointerId === pinch.idA || event.pointerId === pinch.idB) {
         pinch = null;
       }
+      endDrag();
+      return;
+    }
+
+    if (tiltGesture) {
       endDrag();
       return;
     }
@@ -531,12 +576,27 @@ const BoardModule = (() => {
     zoomAt(event.clientX, event.clientY, factor);
   }
 
-  /** Touch pinch via raw touch events (more reliable than multi-pointer on iOS). */
+  /** Touch: 2-finger pinch zoom, 3-finger tilt. */
   function onTouchStart(event) {
     if (!isActive()) return;
+    if (event.touches.length >= 3) {
+      event.preventDefault();
+      endDrag();
+      pinch = null;
+      const center = touchCentroid(event.touches);
+      tiltGesture = {
+        startX: center.x,
+        startY: center.y,
+        originTiltX: tiltX,
+        originTiltY: tiltY,
+      };
+      root?.classList.add("board-module--panning");
+      return;
+    }
     if (event.touches.length === 2) {
       event.preventDefault();
       endDrag();
+      tiltGesture = null;
       pinch = {
         distance: pointerDistance(event.touches[0], event.touches[1]),
         scale,
@@ -548,7 +608,21 @@ const BoardModule = (() => {
   }
 
   function onTouchMove(event) {
-    if (!isActive() || !pinch || event.touches.length < 2) return;
+    if (!isActive()) return;
+
+    if (tiltGesture && event.touches.length >= 3) {
+      event.preventDefault();
+      const center = touchCentroid(event.touches);
+      const dx = center.x - tiltGesture.startX;
+      const dy = center.y - tiltGesture.startY;
+      // Dragging down increases looking-down tilt; sideways yaws the board.
+      tiltX = clamp(tiltGesture.originTiltX + dy * 0.18, MIN_TILT_X, MAX_TILT_X);
+      tiltY = clamp(tiltGesture.originTiltY + dx * 0.16, MIN_TILT_Y, MAX_TILT_Y);
+      applyTilt();
+      return;
+    }
+
+    if (!pinch || event.touches.length < 2) return;
     event.preventDefault();
     const a = event.touches[0];
     const b = event.touches[1];
@@ -563,6 +637,24 @@ const BoardModule = (() => {
   }
 
   function onTouchEnd(event) {
+    if (tiltGesture) {
+      if (event.touches.length >= 3) return;
+      if (event.touches.length === 2) {
+        // Drop from tilt into pinch without jump.
+        tiltGesture = null;
+        pinch = {
+          distance: pointerDistance(event.touches[0], event.touches[1]),
+          scale,
+          idA: event.touches[0].identifier,
+          idB: event.touches[1].identifier,
+        };
+        return;
+      }
+      tiltGesture = null;
+      root?.classList.remove("board-module--panning");
+      return;
+    }
+
     if (!pinch) return;
     if (event.touches.length < 2) {
       pinch = null;
