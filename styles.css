@@ -3741,9 +3741,21 @@ body.board-module-open .score-reset-confirm {
   align-items: center;
   justify-content: center;
   transform-origin: 0 0;
-  perspective: 1400px;
-  perspective-origin: 50% 42%;
   will-change: transform;
+}
+
+/* Perspective lives here (not on the pan/zoom node) so child 3D is preserved. */
+.board-module__scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1600px;
+  perspective-origin: 50% 42%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-module__assembly {
@@ -3762,6 +3774,7 @@ body.board-module-open .score-reset-confirm {
   height: var(--board-size);
   flex-shrink: 0;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
   transform-origin: center center;
 }
@@ -3771,6 +3784,7 @@ body.board-module-open .score-reset-confirm {
   inset: var(--frame-inset);
   z-index: 2;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   background:
     linear-gradient(145deg, #2a2a2c 0%, #121214 45%, #0a0a0c 100%);
   border-radius: 2px;
@@ -3859,6 +3873,7 @@ body.board-module-open .score-reset-confirm {
     0 0 0 1px rgba(0, 0, 0, 0.35);
   background: #0e0e10;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-track {
@@ -3990,10 +4005,11 @@ body.board-module-open .score-reset-confirm {
   pointer-events: none;
   z-index: 5;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-cube {
-  --cube-size: 10px;
+  --cube-size: 14px;
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
@@ -4002,6 +4018,7 @@ body.board-module-open .score-reset-confirm {
   pointer-events: auto;
   cursor: pointer;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -4010,48 +4027,50 @@ body.board-module-open .score-reset-confirm {
 .board-cube__face {
   position: absolute;
   inset: 0;
-  border-radius: 1px;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* No filter here — filters flatten CSS 3D transforms. */
   background:
     linear-gradient(
       145deg,
-      rgba(255, 255, 255, 0.38) 0%,
+      rgba(255, 255, 255, 0.34) 0%,
       transparent 42%,
-      rgba(0, 0, 0, 0.22) 100%
+      rgba(0, 0, 0, 0.2) 100%
     ),
-    var(--cube-color);
+    var(--cube-face-tint, var(--cube-color));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
 }
 
 .board-cube__face--front {
   transform: translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 92%, #000 8%);
 }
 
 .board-cube__face--back {
   transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
-  filter: brightness(0.72);
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 62%, #000 38%);
 }
 
 .board-cube__face--right {
   transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
-  filter: brightness(0.88);
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 78%, #000 22%);
 }
 
 .board-cube__face--left {
   transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
-  filter: brightness(0.8);
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 70%, #000 30%);
 }
 
 .board-cube__face--top {
   transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
-  filter: brightness(1.08);
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
 }
 
 .board-cube__face--bottom {
   transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
-  filter: brightness(0.55);
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 45%, #000 55%);
 }
 
 .board-cube--green { --cube-color: var(--color-green); }

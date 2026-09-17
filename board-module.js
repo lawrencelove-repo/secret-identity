@@ -300,7 +300,8 @@ const BoardModule = (() => {
   function cubeSizePx() {
     const assembly = root?.querySelector(".board-module__assembly");
     const size = assembly?.getBoundingClientRect().width / (scale || 1) || 400;
-    return clamp(size * 0.0165, 5.5, 11);
+    // Large enough that side faces read as real cubes under board tilt.
+    return clamp(size * 0.028, 11, 22);
   }
 
   function refreshCubes() {
@@ -351,7 +352,10 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        cube.style.transform = `translate3d(${layout.x}px, ${layout.y}px, ${size * 0.55}px) rotateZ(${layout.rot}deg)`;
+        // Lift by half-height so the cube sits on the track; small yaw shows side faces.
+        cube.style.transform =
+          `translate3d(${layout.x}px, ${layout.y}px, ${size * 0.5}px) ` +
+          `rotateZ(${layout.rot}deg)`;
 
         CUBE_FACES.forEach((face) => {
           const faceEl = document.createElement("span");
