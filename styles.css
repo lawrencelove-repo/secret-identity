@@ -3776,7 +3776,7 @@ body.board-module-open .score-reset-confirm {
   --card-long: calc(var(--board-size) * 0.30);
   --card-short: calc(var(--board-size) * 0.112);
   --frame-inset: calc(var(--board-size) * 0.155);
-  --board-depth: calc(var(--board-size) * 0.028);
+  --board-depth: calc(var(--board-size) * 0.045);
   --tilt-x: 38deg;
   --tilt-y: -10deg;
   position: relative;
@@ -3876,7 +3876,8 @@ body.board-module-open .score-reset-confirm {
 .board-module__track-wrap {
   position: absolute;
   inset: 7%;
-  transform: translateZ(1px);
+  /* Coplanar with the frame's top face (z = 0). Cubes sit on this plane. */
+  transform: translateZ(0);
   border: 1.5px solid rgba(196, 164, 90, 0.55);
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.45),
@@ -4014,13 +4015,11 @@ body.board-module-open .score-reset-confirm {
   inset: 2.5%;
   pointer-events: none;
   z-index: 5;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
 }
 
 .board-cube {
-  --cube-size: 16px;
-  --cube-depth: 16px;
+  /* Footprint on the track's top plane. Side length S = H = W = L. */
+  --cube-size: 18px;
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
@@ -4028,34 +4027,34 @@ body.board-module-open .score-reset-confirm {
   margin-top: calc(var(--cube-size) / -2);
   pointer-events: auto;
   cursor: pointer;
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
 }
 
+/* Soft contact shadow on the board surface (same plane as the footprint). */
 .board-cube__shadow {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 120%;
-  height: 120%;
-  margin-left: -60%;
-  margin-top: -60%;
-  border-radius: 20%;
-  background: rgba(0, 0, 0, 0.35);
-  /* Local bottom of the cube (= board surface once the cube is elevated). */
-  transform: translateZ(calc(var(--cube-depth) / -2));
+  inset: 6%;
+  border-radius: 18%;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 0;
   pointer-events: none;
 }
 
+/*
+ * 2.5D cube: equal S×S faces. Height is extruded along board -Y so it reads
+ * as standing on the track under the board's rotateX tilt (true CSS 3D faces
+ * were flattening to a single plane in this view stack).
+ */
 .board-cube__face {
   position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  /* No filter here — filters flatten CSS 3D transforms. */
+  left: 0;
+  top: 0;
+  width: var(--cube-size);
+  height: var(--cube-size);
+  box-sizing: border-box;
+  pointer-events: none;
   background:
     linear-gradient(
       145deg,
@@ -4069,46 +4068,26 @@ body.board-module-open .score-reset-confirm {
     inset 0 -1px 0 rgba(0, 0, 0, 0.28);
 }
 
+/* South face: paints the footprint; bottom edge = board contact. */
 .board-cube__face--front {
-  transform: translateZ(calc(var(--cube-depth) / 2));
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 92%, #000 8%);
-}
-
-.board-cube__face--back {
-  transform: rotateY(180deg) translateZ(calc(var(--cube-depth) / 2));
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 62%, #000 38%);
-}
-
-.board-cube__face--right {
-  width: var(--cube-depth);
-  left: 50%;
-  margin-left: calc(var(--cube-depth) / -2);
-  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
+  z-index: 1;
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 78%, #000 22%);
 }
 
-.board-cube__face--left {
-  width: var(--cube-depth);
-  left: 50%;
-  margin-left: calc(var(--cube-depth) / -2);
-  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 70%, #000 30%);
+/* East face: foreshortened wall for side volume. */
+.board-cube__face--right {
+  z-index: 2;
+  width: calc(var(--cube-size) * 0.42);
+  transform: translate(100%, -100%) skewY(-32deg);
+  transform-origin: left bottom;
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 62%, #000 38%);
 }
 
+/* Top face: one side-length "up" the board from the footprint. */
 .board-cube__face--top {
-  height: var(--cube-depth);
-  top: 50%;
-  margin-top: calc(var(--cube-depth) / -2);
-  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
+  z-index: 3;
+  transform: translateY(-100%);
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
-}
-
-.board-cube__face--bottom {
-  height: var(--cube-depth);
-  top: 50%;
-  margin-top: calc(var(--cube-depth) / -2);
-  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 45%, #000 55%);
 }
 
 .board-cube--green { --cube-color: var(--color-green); }

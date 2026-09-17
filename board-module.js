@@ -16,7 +16,7 @@ const BoardModule = (() => {
   const MIN_TILT_Y = -48;
   const MAX_TILT_Y = 48;
   const PAN_CLICK_THRESHOLD = 6;
-  const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
+  const CUBE_FACES = ["front", "right", "top"];
 
   const SECTION_COLORS = {
     yellow: { mid: "#e8c230", light: "#f2d85a", dark: "#c9a018" },
@@ -305,8 +305,8 @@ const BoardModule = (() => {
   function cubeSizePx() {
     const assembly = root?.querySelector(".board-module__assembly");
     const size = assembly?.getBoundingClientRect().width / (scale || 1) || 400;
-    // Chunkier so Z-height reads under the look-down tilt.
-    return clamp(size * 0.034, 13, 26);
+    // True cube side length (H = W = L), sized relative to the board face.
+    return clamp(size * 0.038, 14, 28);
   }
 
   function refreshCubes() {
@@ -329,8 +329,6 @@ const BoardModule = (() => {
 
     cubesEl.replaceChildren();
     const size = cubeSizePx();
-    // Match footprint; depth is the out-of-board axis (elevation).
-    const depth = size;
 
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
@@ -359,11 +357,9 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        cube.style.setProperty("--cube-depth", `${depth}px`);
-        // Sit on the track: lift by half depth so the bottom face rests on z≈0.
+        // Footprint sits on the track plane; yaw only (height is drawn in CSS).
         cube.style.transform =
-          `translate3d(${layout.x}px, ${layout.y}px, ${depth / 2}px) ` +
-          `rotateZ(${layout.rot}deg)`;
+          `translate(${layout.x}px, ${layout.y}px) rotate(${layout.rot}deg)`;
 
         const shadow = document.createElement("span");
         shadow.className = "board-cube__shadow";
