@@ -9,8 +9,8 @@ const BoardModule = (() => {
   const MAX_CUBES_PER_CELL = 8;
   const MIN_SCALE = 0.55;
   const MAX_SCALE = 5.5;
-  const DEFAULT_TILT_X = 26;
-  const DEFAULT_TILT_Y = -8;
+  const DEFAULT_TILT_X = 38;
+  const DEFAULT_TILT_Y = -10;
   const MIN_TILT_X = -12;
   const MAX_TILT_X = 62;
   const MIN_TILT_Y = -48;
@@ -70,6 +70,11 @@ const BoardModule = (() => {
 
   function isActive() {
     return document.body.classList.contains("board-module-open");
+  }
+
+  function setBoardOpenClass(open) {
+    document.body.classList.toggle("board-module-open", open);
+    document.documentElement.classList.toggle("board-module-open", open);
   }
 
   function syncToggleUi() {
@@ -300,8 +305,8 @@ const BoardModule = (() => {
   function cubeSizePx() {
     const assembly = root?.querySelector(".board-module__assembly");
     const size = assembly?.getBoundingClientRect().width / (scale || 1) || 400;
-    // Large enough that side faces read as real cubes under board tilt.
-    return clamp(size * 0.028, 11, 22);
+    // Chunkier so Z-height reads under the look-down tilt.
+    return clamp(size * 0.034, 13, 26);
   }
 
   function refreshCubes() {
@@ -324,6 +329,8 @@ const BoardModule = (() => {
 
     cubesEl.replaceChildren();
     const size = cubeSizePx();
+    // Match footprint; depth is the out-of-board axis (elevation).
+    const depth = size;
 
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
@@ -352,10 +359,16 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        // Lift by half-height so the cube sits on the track; small yaw shows side faces.
+        cube.style.setProperty("--cube-depth", `${depth}px`);
+        // Sit on the track: lift by half depth so the bottom face rests on z≈0.
         cube.style.transform =
-          `translate3d(${layout.x}px, ${layout.y}px, ${size * 0.5}px) ` +
+          `translate3d(${layout.x}px, ${layout.y}px, ${depth / 2}px) ` +
           `rotateZ(${layout.rot}deg)`;
+
+        const shadow = document.createElement("span");
+        shadow.className = "board-cube__shadow";
+        shadow.setAttribute("aria-hidden", "true");
+        cube.appendChild(shadow);
 
         CUBE_FACES.forEach((face) => {
           const faceEl = document.createElement("span");
@@ -432,7 +445,7 @@ const BoardModule = (() => {
       refresh();
       root.hidden = false;
       root.setAttribute("aria-hidden", "false");
-      document.body.classList.add("board-module-open");
+      setBoardOpenClass(true);
       requestAnimationFrame(() => {
         refreshCubes();
         requestAnimationFrame(refreshCubes);
@@ -443,7 +456,7 @@ const BoardModule = (() => {
       tiltGesture = null;
       root.hidden = true;
       root.setAttribute("aria-hidden", "true");
-      document.body.classList.remove("board-module-open");
+      setBoardOpenClass(false);
       root.classList.remove("board-module--panning");
     }
     syncToggleUi();

@@ -3675,7 +3675,16 @@ body.character-specify-module-open {
    Board module — physical scoring track view
    ============================================================ */
 body.board-module-open {
-  overflow: hidden;
+  /* Avoid overflow:hidden here — it forces transform-style to flat and
+     collapses CSS 3D cubes into 2D faces. Board is position:fixed. */
+  overscroll-behavior: none;
+}
+
+/* html/body default overflow also flattens preserve-3d — clear while board is open. */
+html.board-module-open,
+body.board-module-open {
+  overflow: visible;
+  overscroll-behavior: none;
 }
 
 body.board-module-open .stage,
@@ -3719,7 +3728,8 @@ body.board-module-open .score-reset-confirm {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* visible: overflow:hidden flattens descendant preserve-3d (cube sides vanish). */
+  overflow: visible;
   cursor: grab;
   padding:
     max(0.15rem, env(safe-area-inset-top, 0px))
@@ -3767,8 +3777,8 @@ body.board-module-open .score-reset-confirm {
   --card-short: calc(var(--board-size) * 0.112);
   --frame-inset: calc(var(--board-size) * 0.155);
   --board-depth: calc(var(--board-size) * 0.028);
-  --tilt-x: 26deg;
-  --tilt-y: -8deg;
+  --tilt-x: 38deg;
+  --tilt-y: -10deg;
   position: relative;
   width: var(--board-size);
   height: var(--board-size);
@@ -4009,7 +4019,8 @@ body.board-module-open .score-reset-confirm {
 }
 
 .board-cube {
-  --cube-size: 14px;
+  --cube-size: 16px;
+  --cube-depth: 16px;
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
@@ -4022,6 +4033,21 @@ body.board-module-open .score-reset-confirm {
   background: transparent;
   border-radius: 0;
   box-shadow: none;
+}
+
+.board-cube__shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  height: 120%;
+  margin-left: -60%;
+  margin-top: -60%;
+  border-radius: 20%;
+  background: rgba(0, 0, 0, 0.35);
+  /* Local bottom of the cube (= board surface once the cube is elevated). */
+  transform: translateZ(calc(var(--cube-depth) / -2));
+  pointer-events: none;
 }
 
 .board-cube__face {
@@ -4044,31 +4070,43 @@ body.board-module-open .score-reset-confirm {
 }
 
 .board-cube__face--front {
-  transform: translateZ(calc(var(--cube-size) / 2));
+  transform: translateZ(calc(var(--cube-depth) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 92%, #000 8%);
 }
 
 .board-cube__face--back {
-  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
+  transform: rotateY(180deg) translateZ(calc(var(--cube-depth) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 62%, #000 38%);
 }
 
 .board-cube__face--right {
+  width: var(--cube-depth);
+  left: 50%;
+  margin-left: calc(var(--cube-depth) / -2);
   transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 78%, #000 22%);
 }
 
 .board-cube__face--left {
+  width: var(--cube-depth);
+  left: 50%;
+  margin-left: calc(var(--cube-depth) / -2);
   transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 70%, #000 30%);
 }
 
 .board-cube__face--top {
+  height: var(--cube-depth);
+  top: 50%;
+  margin-top: calc(var(--cube-depth) / -2);
   transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
 }
 
 .board-cube__face--bottom {
+  height: var(--cube-depth);
+  top: 50%;
+  margin-top: calc(var(--cube-depth) / -2);
   transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
   --cube-face-tint: color-mix(in srgb, var(--cube-color) 45%, #000 55%);
 }
