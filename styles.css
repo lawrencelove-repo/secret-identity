@@ -3735,10 +3735,16 @@ body.board-module-open {
   overscroll-behavior: none;
 }
 
-body.board-module-open .stage,
-body.board-module-open .app-menu {
+body.board-module-open .stage {
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Keep hamburger menu usable over the board. */
+body.board-module-open .app-menu {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1600;
 }
 
 /* Character / score / round overlays must sit above the board view */
