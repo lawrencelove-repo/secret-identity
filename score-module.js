@@ -155,9 +155,15 @@ const ScoreModule = (() => {
     selectedColor = colorId;
     roundNumber = RoundModule.viewingRound;
 
-    const saved = RoundModule.getPlayerScore(roundNumber, colorId);
-    draftScore = typeof saved === "number" ? saved : 0;
-    draftMarks = new Set(RoundModule.getPlayerMarks(roundNumber, colorId));
+    // Own points only — never pre-fill from points earned when others marked you.
+    if (RoundModule.isPlayerTabulated(roundNumber, colorId)) {
+      const saved = RoundModule.getPlayerScore(roundNumber, colorId);
+      draftScore = typeof saved === "number" ? saved : 0;
+      draftMarks = new Set(RoundModule.getPlayerMarks(roundNumber, colorId));
+    } else {
+      draftScore = 0;
+      draftMarks = new Set();
+    }
     editingName = false;
     setNameEditMode(false);
 

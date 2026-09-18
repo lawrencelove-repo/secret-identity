@@ -1,10 +1,12 @@
 /**
  * Winner module — shown once when Round 4 scores are fully entered.
  * First place uses a score-module-style color bar; second place is a smaller bar.
+ * Board celebration (spin + fireworks) runs behind the dialog.
  */
 const WinnerModule = (() => {
   const root = document.getElementById("winner-module");
   const titleEl = document.getElementById("winner-module-title");
+  const tiebreakEl = document.getElementById("winner-module-tiebreak");
   const firstEl = document.getElementById("winner-module-first");
   const secondWrapEl = document.getElementById("winner-module-second-wrap");
   const secondEl = document.getElementById("winner-module-second");
@@ -48,6 +50,9 @@ const WinnerModule = (() => {
     if (titleEl) {
       titleEl.textContent = tied ? "It's a tie!" : "Winner!";
     }
+    if (tiebreakEl) {
+      tiebreakEl.hidden = !tied;
+    }
 
     if (firstEl) {
       firstEl.replaceChildren();
@@ -71,7 +76,7 @@ const WinnerModule = (() => {
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
     document.body.classList.add("winner-module-open");
-    root.querySelector("[data-winner-module-close]")?.focus();
+    root.querySelector(".winner-module__ok")?.focus();
   }
 
   function close() {
@@ -79,10 +84,11 @@ const WinnerModule = (() => {
     root.hidden = true;
     root.setAttribute("aria-hidden", "true");
     document.body.classList.remove("winner-module-open");
+    // Board celebration (spin + fireworks) keeps running until the board is closed.
   }
 
   root?.addEventListener("click", (event) => {
-    if (event.target.closest("[data-winner-module-close]")) {
+    if (event.target.closest(".winner-module__ok")) {
       close();
     }
   });

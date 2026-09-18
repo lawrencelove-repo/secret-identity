@@ -1142,6 +1142,11 @@ body.settings-module-open {
   padding: 0.95rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.settings-module__control .settings-module__switch-label {
+  color: #fff;
 }
 
 .settings-module__text-scale {
@@ -3341,6 +3346,10 @@ body.winner-module-open {
   overflow: hidden;
 }
 
+body.winner-module-open.board-module-open {
+  overflow: visible;
+}
+
 .winner-module {
   position: fixed;
   inset: 0;
@@ -3349,6 +3358,7 @@ body.winner-module-open {
   align-items: center;
   justify-content: center;
   padding: 4vmin;
+  pointer-events: none;
 }
 
 .winner-module[hidden] {
@@ -3358,8 +3368,8 @@ body.winner-module-open {
 .winner-module__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 2, 2, 0.78);
-  cursor: pointer;
+  background: rgba(8, 2, 2, 0.42);
+  pointer-events: none;
 }
 
 .winner-module__dialog {
@@ -3381,6 +3391,7 @@ body.winner-module-open {
   border: 2px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
   text-align: center;
+  pointer-events: auto;
 }
 
 .winner-module__title {
@@ -3391,6 +3402,21 @@ body.winner-module-open {
   font-size: clamp(2rem, 5vw, 2.6rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.winner-module__tiebreak {
+  margin: -0.35rem 0 1rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.winner-module__tiebreak[hidden] {
+  display: none;
 }
 
 .winner-module__first,
@@ -3715,13 +3741,26 @@ body.board-module-open .app-menu {
   pointer-events: none;
 }
 
-/* Character / score overlays must sit above the board view */
+/* Character / score / round overlays must sit above the board view */
 body.board-module-open .character-module,
 body.board-module-open .character-replace-confirm,
 body.board-module-open .character-specify-module,
 body.board-module-open .score-module,
-body.board-module-open .score-reset-confirm {
+body.board-module-open .score-reset-confirm,
+body.board-module-open .round-confirm {
   z-index: 1700;
+}
+
+/* Past-round summary stays visible over the board (stage is visibility:hidden). */
+body.board-module-open .round-scoreboard:not([hidden]) {
+  visibility: visible;
+  position: fixed;
+  left: 50%;
+  bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  z-index: 1600;
+  width: min(92vw, 520px);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .board-module {
@@ -3744,6 +3783,51 @@ body.board-module-open .score-reset-confirm {
 
 .board-module[hidden] {
   display: none;
+}
+
+.board-module__fx {
+  position: fixed;
+  inset: 0;
+  z-index: 1520;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+}
+
+.board-module__fx.is-active {
+  display: block;
+}
+
+.board-module__rounds {
+  position: absolute;
+  top: max(0.45rem, env(safe-area-inset-top, 0px));
+  left: max(0.45rem, env(safe-area-inset-left, 0px));
+  z-index: 30;
+  display: flex;
+  width: auto;
+  max-width: calc(100% - 1rem);
+  padding: 0.35rem 0.55rem;
+  gap: 0.55rem;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.4rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+}
+
+body.board-module-open .board-module__rounds {
+  display: flex !important;
+}
+
+.board-module__rounds .round-indicator__label {
+  font-size: clamp(0.95rem, 2.4vmin, 1.3rem);
+}
+
+.board-module__rounds .round-indicator__num {
+  width: clamp(1.55rem, 3.8vmin, 2.15rem);
+  height: clamp(1.55rem, 3.8vmin, 2.15rem);
+  font-size: clamp(0.85rem, 2.1vmin, 1.1rem);
 }
 
 .board-module__stage {
@@ -3807,7 +3891,7 @@ body.board-module-open .score-reset-confirm {
   flex-shrink: 0;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  transform: rotateZ(0deg) rotateX(38deg) rotateY(-8deg);
+  transform: rotateX(38deg) rotateY(-8deg) rotateZ(0deg);
   transform-origin: center center;
 }
 
@@ -4133,6 +4217,16 @@ body.board-module-open .score-reset-confirm {
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+/* White glow = scored (tabulated) this round — box-shadow only (filter flattens 3D). */
+.board-cube.is-tabulated .board-cube__face {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 1.5px rgba(255, 255, 255, 0.95),
+    0 0 7px 2px rgba(255, 255, 255, 0.75),
+    0 0 14px 3px rgba(255, 255, 255, 0.35);
 }
 
 /* Board plane is XY; +Z is out of the board. Lid = +Z (sample "front"). */

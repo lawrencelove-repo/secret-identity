@@ -20,6 +20,12 @@ const BoardModule = (() => {
   const TILT_SENSITIVITY = 0.4;
   const AZIMUTH_SENSITIVITY = 0.35;
   const HOP_MS = 450;
+  const CELEBRATION_TILT_X = 30;
+  const CELEBRATION_TILT_Y = -10;
+  const CELEBRATION_SPIN_DEG_PER_SEC = 10;
+  const CELEBRATION_IDLE_MS = 10000;
+  const CELEBRATION_BURST_MS = 900;
+  const FX_COLORS = ["#ffd54a", "#ff5a5a", "#7ec8ff", "#ffffff", "#ff9f43", "#c56cff", "#7dffb3"];
   const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
@@ -52,6 +58,7 @@ const BoardModule = (() => {
   const assemblyEl = root?.querySelector(".board-module__assembly");
   const trackEl = document.getElementById("board-track");
   const cubesEl = document.getElementById("board-cubes");
+  const fxCanvas = document.getElementById("board-fx");
   const toggle = document.getElementById("board-module-toggle");
 
   let built = false;
@@ -80,6 +87,18 @@ const BoardModule = (() => {
   /** True when Round scores changed while the board was closed. */
   let scoresDirty = false;
 
+  let celebrationActive = false;
+  let pendingCelebration = false;
+  /** @type {string[]} */
+  let celebrationColors = [];
+  let celebrationAutoSpin = false;
+  let celebrationLastActivity = 0;
+  let celebrationRaf = 0;
+  let celebrationLastTs = 0;
+  let celebrationBurstAcc = 0;
+  /** @type {Array<{ x: number, y: number, vx: number, vy: number, life: number, age: number, color: string, size: number }>} */
+  let fxParticles = [];
+
   function isActive() {
     return document.body.classList.contains("board-module-open");
   }
@@ -107,9 +126,10 @@ const BoardModule = (() => {
 
   function applyTilt() {
     if (!assemblyEl) return;
-    // Azimuth spins the board; tiltX tips it toward/away from the camera.
+    // Tip first, then spin on the board's vertical axis so the "ground" stays
+    // level (turntable), instead of orbiting in screen space.
     assemblyEl.style.transform =
-      `rotateZ(${azimuth}deg) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+      `rotateX(${tiltX}deg) rotateY(${tiltY}deg) rotateZ(${azimuth}deg)`;
   }
 
   function applyTransform() {
@@ -363,7 +383,7 @@ const BoardModule = (() => {
     const sceneEl = root?.querySelector(".board-module__scene");
     const prevAssembly = assemblyEl.style.transform;
     const prevPerspective = sceneEl ? sceneEl.style.perspective : "";
-    assemblyEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+    assemblyEl.style.transform = "rotateX(0deg) rotateY(0deg) rotateZ(0deg)";
     if (sceneEl) sceneEl.style.perspective = "none";
     void assemblyEl.offsetWidth;
     try {
@@ -371,7 +391,7 @@ const BoardModule = (() => {
     } finally {
       assemblyEl.style.transform =
         prevAssembly ||
-        `rotateZ(${azimuth}deg) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        `rotateX(${tiltX}deg) rotateY(${tiltY}deg) rotateZ(${azimuth}deg)`;
       if (sceneEl) sceneEl.style.perspective = prevPerspective;
     }
   }
@@ -420,6 +440,231 @@ const BoardModule = (() => {
     return typeof AppSettings !== "undefined" && AppSettings.getAnimateCubeMoves();
   }
 
+  function resizeFxCanvas() {
+    if (!fxCanvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    fxCanvas.width = Math.max(1, Math.floor(w * dpr));
+    fxCanvas.height = Math.max(1, Math.floor(h * dpr));
+    fxCanvas.style.width = `${w}px`;
+    fxCanvas.style.height = `${h}px`;
+    const ctx = fxCanvas.getContext("2d");
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function clearFireworks() {
+    fxParticles = [];
+    if (!fxCanvas) return;
+    const ctx = fxCanvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    fxCanvas.classList.remove("is-active");
+  }
+
+  function burstFireworksFromColor(colorId) {
+    const cube = cubesEl?.querySelector(`.board-cube--${colorId}`);
+    if (!cube) return;
+    const rect = cube.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const count = 26 + Math.floor(Math.random() * 10);
+    for (let i = 0; i < count; i += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 90 + Math.random() * 240;
+      fxParticles.push({
+        x: cx + (Math.random() - 0.5) * 8,
+        y: cy + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 50,
+        life: 0.55 + Math.random() * 0.85,
+        age: 0,
+        color: FX_COLORS[i % FX_COLORS.length],
+        size: 1.6 + Math.random() * 3.2,
+      });
+    }
+  }
+
+  function updateFireworks(dt) {
+    if (!fxCanvas || !celebrationActive) return;
+    const ctx = fxCanvas.getContext("2d");
+    if (!ctx) return;
+
+    celebrationBurstAcc += dt * 1000;
+    if (celebrationBurstAcc >= CELEBRATION_BURST_MS) {
+      celebrationBurstAcc = 0;
+      celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+    }
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    fxParticles = fxParticles.filter((p) => {
+      p.age += dt;
+      if (p.age >= p.life) return false;
+      p.vy += 420 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      const t = 1 - p.age / p.life;
+      ctx.globalAlpha = Math.max(0, t);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (0.55 + 0.45 * t), 0, Math.PI * 2);
+      ctx.fill();
+      return true;
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function noteCelebrationActivity() {
+    if (!celebrationActive) return;
+    celebrationAutoSpin = false;
+    celebrationLastActivity = performance.now();
+  }
+
+  function celebrationFrame(ts) {
+    if (!celebrationActive) return;
+    const now = ts || performance.now();
+    const dt = celebrationLastTs ? Math.min(0.05, (now - celebrationLastTs) / 1000) : 0.016;
+    celebrationLastTs = now;
+
+    if (!celebrationAutoSpin && now - celebrationLastActivity >= CELEBRATION_IDLE_MS) {
+      celebrationAutoSpin = true;
+    }
+
+    if (celebrationAutoSpin) {
+      azimuth += CELEBRATION_SPIN_DEG_PER_SEC * dt;
+      applyTilt();
+    }
+
+    updateFireworks(dt);
+    celebrationRaf = requestAnimationFrame(celebrationFrame);
+  }
+
+  function startCelebration(colorIds) {
+    celebrationColors = (colorIds || []).filter(Boolean);
+    if (!celebrationColors.length) return;
+
+    celebrationActive = true;
+    pendingCelebration = false;
+    celebrationAutoSpin = true;
+    celebrationLastActivity = performance.now();
+    celebrationLastTs = 0;
+    celebrationBurstAcc = CELEBRATION_BURST_MS;
+    tiltX = CELEBRATION_TILT_X;
+    tiltY = CELEBRATION_TILT_Y;
+    applyTilt();
+
+    resizeFxCanvas();
+    fxCanvas?.classList.add("is-active");
+    fxParticles = [];
+    celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+
+    if (celebrationRaf) cancelAnimationFrame(celebrationRaf);
+    celebrationRaf = requestAnimationFrame(celebrationFrame);
+    root?.classList.add("board-module--celebrating");
+  }
+
+  function stopCelebration() {
+    pendingCelebration = false;
+    celebrationActive = false;
+    celebrationAutoSpin = false;
+    celebrationColors = [];
+    if (celebrationRaf) {
+      cancelAnimationFrame(celebrationRaf);
+      celebrationRaf = 0;
+    }
+    clearFireworks();
+    root?.classList.remove("board-module--celebrating");
+  }
+
+  function maybeStartPendingCelebration() {
+    if (!pendingCelebration || !isActive() || hopTimer) return;
+    startCelebration(celebrationColors);
+  }
+
+  /**
+   * Open the board behind the winner modal and begin spin + fireworks
+   * once cubes are in their final seats.
+   */
+  function presentForWinner(colorIds) {
+    celebrationColors = (colorIds || []).filter(Boolean);
+    pendingCelebration = true;
+    if (!isActive()) {
+      setActive(true);
+      return;
+    }
+    refreshCards();
+    refreshCubes();
+    maybeStartPendingCelebration();
+  }
+
+  function clampTrackScore(raw) {
+    return Math.max(0, Math.min(TRACK_MAX, typeof raw === "number" ? raw : 0));
+  }
+
+  function isReviewingPastRound() {
+    return Boolean(
+      typeof RoundModule !== "undefined" &&
+        RoundModule.gameStarted &&
+        RoundModule.viewingRound < RoundModule.currentRound
+    );
+  }
+
+  /** Cumulative seat scores through `roundNumber` (0 → everyone at 0). */
+  function scoresThroughRound(roundNumber) {
+    /** @type {Record<string, number>} */
+    const scores = {};
+    if (typeof RoundModule === "undefined" || !RoundModule.gameStarted) {
+      return scores;
+    }
+    const cumulative =
+      roundNumber < 1 ? {} : RoundModule.getCumulativeScoresThrough(roundNumber);
+    RoundModule.activeColors().forEach((colorId) => {
+      scores[colorId] = clampTrackScore(cumulative[colorId]);
+    });
+    return scores;
+  }
+
+  function groupColorsByScore(scoreMap) {
+    /** @type {Record<number, string[]>} */
+    const byScore = {};
+    Object.entries(scoreMap).forEach(([colorId, score]) => {
+      if (!byScore[score]) byScore[score] = [];
+      byScore[score].push(colorId);
+    });
+    return byScore;
+  }
+
+  function formatCubeTitle(colorId, cumulativeScore) {
+    const name = RoundModule.getPlayerName(colorId);
+    if (isReviewingPastRound()) {
+      const delta = RoundModule.getEffectiveRoundScore(
+        RoundModule.viewingRound,
+        colorId
+      );
+      return `${name}: +${delta} this round`;
+    }
+    return `${name}: ${cumulativeScore}`;
+  }
+
+  function formatCubeAria(colorId, cumulativeScore, tabulated) {
+    const name = RoundModule.getPlayerName(colorId);
+    if (isReviewingPastRound()) {
+      const delta = RoundModule.getEffectiveRoundScore(
+        RoundModule.viewingRound,
+        colorId
+      );
+      return `${name} advanced +${delta} points in round ${RoundModule.viewingRound}${
+        tabulated ? ", scored that round" : ""
+      }.`;
+    }
+    return `${name} at ${cumulativeScore} points${
+      tabulated ? ", scored this round" : ""
+    }. Open score.`;
+  }
+
   function buildCubeElement(colorId, score, size, zone, layout) {
     const cube = document.createElement("div");
     cube.className = `board-cube board-cube--${colorId}`;
@@ -428,11 +673,12 @@ const BoardModule = (() => {
     cube.dataset.seat = String((layout.seatIndex ?? 0) + 1);
     cube.setAttribute("role", "button");
     cube.tabIndex = 0;
-    cube.title = `${RoundModule.getPlayerName(colorId)}: ${score}`;
-    cube.setAttribute(
-      "aria-label",
-      `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
-    );
+    cube.title = formatCubeTitle(colorId, score);
+    const tabulated =
+      !isReviewingPastRound() &&
+      RoundModule.isPlayerTabulated(RoundModule.viewingRound, colorId);
+    cube.classList.toggle("is-tabulated", tabulated);
+    cube.setAttribute("aria-label", formatCubeAria(colorId, score, tabulated));
     cube.style.setProperty("--cube-size", `${size}px`);
     cube.style.left = `${zone.cx + layout.x}px`;
     cube.style.top = `${zone.cy + layout.y}px`;
@@ -456,6 +702,20 @@ const BoardModule = (() => {
     hop.appendChild(solid);
     cube.appendChild(hop);
     return cube;
+  }
+
+  /** Sync white glow with which colors are tabulated for the current round. */
+  function syncCubeTabulatedStates() {
+    if (!cubesEl || typeof RoundModule === "undefined") return;
+    const reviewing = isReviewingPastRound();
+    const round = RoundModule.viewingRound;
+    cubesEl.querySelectorAll(".board-cube").forEach((cube) => {
+      const colorId = cube.dataset.color;
+      if (!colorId) return;
+      const tabulated =
+        !reviewing && RoundModule.isPlayerTabulated(round, colorId);
+      cube.classList.toggle("is-tabulated", tabulated);
+    });
   }
 
   function triggerHop(cube) {
@@ -505,6 +765,8 @@ const BoardModule = (() => {
         cubeScoreByColor[colorId] = score;
       });
     });
+
+    maybeStartPendingCelebration();
   }
 
   /**
@@ -565,7 +827,16 @@ const BoardModule = (() => {
         state.el.style.setProperty("--cube-size", `${size}px`);
         state.el.dataset.score = String(state.current);
         state.el.dataset.seat = String(layout.seatIndex + 1);
-        state.el.title = `${RoundModule.getPlayerName(state.color)}: ${state.current}`;
+        state.el.title = formatCubeTitle(state.color, state.current);
+        state.el.setAttribute(
+          "aria-label",
+          formatCubeAria(
+            state.color,
+            state.current,
+            !isReviewingPastRound() &&
+              RoundModule.isPlayerTabulated(RoundModule.viewingRound, state.color)
+          )
+        );
         // Same seat number in every zone along the path.
         state.el.style.left = `${zone.cx + layout.x}px`;
         state.el.style.top = `${zone.cy + layout.y}px`;
@@ -591,43 +862,59 @@ const BoardModule = (() => {
 
   function refreshCubes(options = {}) {
     if (!cubesEl || !trackEl || typeof RoundModule === "undefined") return;
-    // Let an in-flight hop finish; it rebuilds seats at the end.
-    if (hopTimer) return;
+    // Interrupt an in-flight hop so a new viewing-round target can animate.
+    if (hopTimer) {
+      stopHopAnimation();
+    }
     ensureTrack();
 
     const active = RoundModule.gameStarted ? RoundModule.activeColors() : [];
-    const cumulative = RoundModule.gameStarted
-      ? RoundModule.getCumulativeScoresThrough(RoundModule.viewingRound)
-      : {};
-
-    /** @type {Record<number, string[]>} */
-    const byScore = {};
-    /** @type {Record<string, number>} */
-    const newScores = {};
-    active.forEach((colorId) => {
-      const raw = cumulative[colorId];
-      const score = Math.max(0, Math.min(TRACK_MAX, typeof raw === "number" ? raw : 0));
-      newScores[colorId] = score;
-      if (!byScore[score]) byScore[score] = [];
-      byScore[score].push(colorId);
-    });
+    const viewing = RoundModule.viewingRound;
+    const reviewing = isReviewingPastRound();
+    const endScores = scoresThroughRound(RoundModule.gameStarted ? viewing : 0);
+    const byScoreEnd = groupColorsByScore(endScores);
 
     const scoreModalOpen = document.body.classList.contains("score-module-open");
-    // On open, only hop when Round changed scores while we were closed.
+    const hopsAllowed =
+      cubeHopEnabled() && isActive() && !scoreModalOpen;
+
+    // Past-round replay: always start at end of prior round, then hop forward.
+    if (reviewing) {
+      scoresDirty = false;
+      const startScores = scoresThroughRound(viewing - 1);
+      const byScoreStart = groupColorsByScore(startScores);
+
+      if (hopsAllowed) {
+        rebuildCubesInstant(byScoreStart);
+        /** @type {Array<{ color: string, from: number, to: number }>} */
+        const movers = [];
+        active.forEach((colorId) => {
+          const from = startScores[colorId] ?? 0;
+          const to = endScores[colorId] ?? 0;
+          if (from !== to) movers.push({ color: colorId, from, to });
+        });
+        if (movers.length) {
+          startHopAnimation(movers, byScoreEnd);
+          return;
+        }
+      }
+
+      stopHopAnimation();
+      rebuildCubesInstant(byScoreEnd);
+      return;
+    }
+
+    // Live / current round: hop from last-known seats when scores change.
     const allowHop = options.fromOpen ? scoresDirty : true;
     const canAnimate =
-      allowHop &&
-      cubeHopEnabled() &&
-      isActive() &&
-      !scoreModalOpen &&
-      Object.keys(cubeScoreByColor).length > 0;
+      allowHop && hopsAllowed && Object.keys(cubeScoreByColor).length > 0;
 
     /** @type {Array<{ color: string, from: number, to: number }>} */
     const movers = [];
     if (canAnimate) {
       active.forEach((colorId) => {
         const from = cubeScoreByColor[colorId];
-        const to = newScores[colorId];
+        const to = endScores[colorId];
         if (typeof from === "number" && from !== to) {
           movers.push({ color: colorId, from, to });
         }
@@ -637,12 +924,12 @@ const BoardModule = (() => {
     scoresDirty = false;
 
     if (movers.length) {
-      startHopAnimation(movers, byScore);
+      startHopAnimation(movers, byScoreEnd);
       return;
     }
 
     stopHopAnimation();
-    rebuildCubesInstant(byScore);
+    rebuildCubesInstant(byScoreEnd);
   }
 
   function refresh() {
@@ -653,12 +940,18 @@ const BoardModule = (() => {
   }
 
   function openCharacterFromCard(card) {
+    if (celebrationActive || document.body.classList.contains("winner-module-open")) {
+      return;
+    }
     const character = card?._character;
     if (!character || typeof CharacterModule === "undefined") return;
     CharacterModule.open(character);
   }
 
   function openScoreFromCube(cube) {
+    if (celebrationActive || document.body.classList.contains("winner-module-open")) {
+      return;
+    }
     const colorId = cube?.dataset?.color;
     if (!colorId || typeof ScoreModule === "undefined") return;
     if (typeof RoundModule !== "undefined" && !RoundModule.activeColors().includes(colorId)) {
@@ -693,6 +986,10 @@ const BoardModule = (() => {
   function setActive(active) {
     if (!root) return;
     const next = Boolean(active);
+    // Keep the board visible while the winner dialog is up.
+    if (!next && document.body.classList.contains("winner-module-open")) {
+      return;
+    }
     if (next) {
       if (typeof CharactersFullscreen !== "undefined") {
         CharactersFullscreen.setActive(false);
@@ -713,6 +1010,7 @@ const BoardModule = (() => {
         });
       });
     } else {
+      stopCelebration();
       stopHopAnimation();
       // Keep seats + last-known scores so a later open can hop from them.
       // If a hop was interrupted, snap stored scores to each cube's current zone.
@@ -767,6 +1065,7 @@ const BoardModule = (() => {
     if (!isActive() || !stageEl) return;
     if (event.button != null && event.button !== 0) return;
     if (pinch || tiltGesture) return;
+    noteCelebrationActivity();
 
     suppressCardClick = false;
     const fromTargetCube = cubeFromEventTarget(event.target);
@@ -809,6 +1108,7 @@ const BoardModule = (() => {
     }
     if (!drag.moved) return;
 
+    noteCelebrationActivity();
     panX = drag.originPanX + dx;
     panY = drag.originPanY + dy;
     applyPanZoom();
@@ -860,6 +1160,7 @@ const BoardModule = (() => {
   function onWheel(event) {
     if (!isActive()) return;
     event.preventDefault();
+    noteCelebrationActivity();
     const direction = event.deltaY > 0 ? -1 : 1;
     const factor = direction > 0 ? 1.08 : 1 / 1.08;
     zoomAt(event.clientX, event.clientY, factor);
@@ -870,6 +1171,7 @@ const BoardModule = (() => {
     if (!isActive()) return;
     if (event.touches.length === 3) {
       event.preventDefault();
+      noteCelebrationActivity();
       endDrag();
       pinch = null;
       const midpoint = threeFingerMidpoint(event.touches);
@@ -887,6 +1189,7 @@ const BoardModule = (() => {
     }
     if (event.touches.length === 2) {
       event.preventDefault();
+      noteCelebrationActivity();
       endDrag();
       tiltGesture = null;
       pinch = {
@@ -904,6 +1207,7 @@ const BoardModule = (() => {
 
     if (tiltGesture && event.touches.length === 3) {
       event.preventDefault();
+      noteCelebrationActivity();
       const midpoint = threeFingerMidpoint(event.touches);
       const dx = midpoint.x - tiltGesture.startX;
       const dy = midpoint.y - tiltGesture.startY;
@@ -924,6 +1228,7 @@ const BoardModule = (() => {
 
     if (!pinch || event.touches.length < 2) return;
     event.preventDefault();
+    noteCelebrationActivity();
     const a = event.touches[0];
     const b = event.touches[1];
     const distance = pointerDistance(a, b);
@@ -1027,6 +1332,7 @@ const BoardModule = (() => {
 
   window.addEventListener("resize", () => {
     if (isActive()) refreshCubes();
+    if (celebrationActive) resizeFxCanvas();
   });
 
   bindViewport();
@@ -1042,5 +1348,7 @@ const BoardModule = (() => {
     refresh,
     markScoresChanged,
     clearCubeIdentity,
+    presentForWinner,
+    stopCelebration,
   };
 })();

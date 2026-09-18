@@ -1,5 +1,5 @@
 /* Minimal offline cache for Secret Identity PWA */
-const CACHE_NAME = "secret-identity-v19";
+const CACHE_NAME = "secret-identity-v26";
 const ASSETS = [
   "./",
   "./index.html",

@@ -203,6 +203,30 @@ const RoundModule = (() => {
     return [...(round.marks[colorId] || [])];
   }
 
+  /**
+   * Points this player received because other players marked them.
+   * Not stored on their score — derived from everyone else's marks.
+   */
+  function getIncomingMarkPoints(roundNumber, colorId) {
+    const round = getRound(roundNumber);
+    if (!round || !activeColors().includes(colorId)) return 0;
+    let count = 0;
+    activeColors().forEach((other) => {
+      if (other === colorId) return;
+      if ((round.marks[other] || []).includes(colorId)) count += 1;
+    });
+    return count;
+  }
+
+  /**
+   * Effective round points: own entered score + points from being marked.
+   */
+  function getEffectiveRoundScore(roundNumber, colorId) {
+    const own = getPlayerScore(roundNumber, colorId);
+    const ownPoints = typeof own === "number" ? own : 0;
+    return ownPoints + getIncomingMarkPoints(roundNumber, colorId);
+  }
+
   function adjustPlayerScore(roundNumber, colorId, delta) {
     if (!delta) return false;
     const current = getPlayerScore(roundNumber, colorId);
@@ -213,27 +237,16 @@ const RoundModule = (() => {
 
   /**
    * Commit a player's round score and opponent marks from the score module.
-   * Newly marked opponents gain +1; unmarked opponents lose -1.
+   * `points` are only what this player earned via their own mark selections.
+   * Opponents' board totals still rise from being marked (computed, not written
+   * into their score-module value).
    */
   function commitPlayerRoundScore(roundNumber, colorId, points, marks = []) {
     const round = getRound(roundNumber);
     if (!round || !activeColors().includes(colorId)) return false;
 
     const allowed = new Set(activeColors().filter((color) => color !== colorId));
-    const previousMarks = new Set(round.marks[colorId] || []);
     const nextMarks = [...new Set(marks.filter((mark) => allowed.has(mark)))];
-    const nextSet = new Set(nextMarks);
-
-    for (const mark of nextSet) {
-      if (!previousMarks.has(mark)) {
-        adjustPlayerScore(roundNumber, mark, 1);
-      }
-    }
-    for (const mark of previousMarks) {
-      if (!nextSet.has(mark)) {
-        adjustPlayerScore(roundNumber, mark, -1);
-      }
-    }
 
     if (!setPlayerScore(roundNumber, colorId, points)) return false;
     round.marks[colorId] = nextMarks;
@@ -255,8 +268,7 @@ const RoundModule = (() => {
 
   function getRoundTotal(colorId) {
     return rounds.reduce((sum, round) => {
-      const value = round.scores[colorId];
-      return sum + (typeof value === "number" ? value : 0);
+      return sum + getEffectiveRoundScore(round.number, colorId);
     }, 0);
   }
 
@@ -267,8 +279,7 @@ const RoundModule = (() => {
         let sum = 0;
         for (const round of rounds) {
           if (round.number > roundNumber) break;
-          const value = round.scores[color];
-          if (typeof value === "number") sum += value;
+          sum += getEffectiveRoundScore(round.number, color);
         }
         return [color, sum];
       })
@@ -298,13 +309,15 @@ const RoundModule = (() => {
   }
 
   /** True if any active player has a numeric score or is tabulated this round. */
+  /** True if any active player has awarded points this round (own or incoming). */
   function roundHasAwardedPoints(roundNumber) {
     const round = getRound(roundNumber);
     if (!round) return false;
-    return activeColors().some(
-      (color) =>
-        typeof round.scores[color] === "number" || round.tabulated[color] === true
-    );
+    return activeColors().some((color) => {
+      if (round.tabulated[color] === true) return true;
+      if (typeof round.scores[color] === "number") return true;
+      return getIncomingMarkPoints(roundNumber, color) > 0;
+    });
   }
 
   /**
@@ -394,15 +407,15 @@ const RoundModule = (() => {
   }
 
   function renderIndicator() {
-    if (!indicatorEl) return;
-
-    indicatorEl.querySelectorAll("[data-round]").forEach((btn) => {
-      const num = Number(btn.dataset.round);
-      btn.classList.toggle("is-current", num === currentRound);
-      btn.classList.toggle("is-viewing", num === viewingRound);
-      btn.classList.toggle("is-past", num < currentRound);
-      btn.classList.toggle("is-future", num > currentRound);
-      btn.setAttribute("aria-current", num === viewingRound ? "true" : "false");
+    document.querySelectorAll(".round-indicator").forEach((indicator) => {
+      indicator.querySelectorAll("[data-round]").forEach((btn) => {
+        const num = Number(btn.dataset.round);
+        btn.classList.toggle("is-current", num === currentRound);
+        btn.classList.toggle("is-viewing", num === viewingRound);
+        btn.classList.toggle("is-past", num < currentRound);
+        btn.classList.toggle("is-future", num > currentRound);
+        btn.setAttribute("aria-current", num === viewingRound ? "true" : "false");
+      });
     });
   }
 
@@ -526,7 +539,7 @@ const RoundModule = (() => {
       .map((color) => ({
         color,
         label: getPlayerName(color),
-        score: round.scores[color],
+        score: getEffectiveRoundScore(roundNumber, color),
       }))
       .sort((a, b) => {
         const scoreA = typeof a.score === "number" ? a.score : -1;
@@ -707,10 +720,7 @@ const RoundModule = (() => {
         [picks[i], picks[j]] = [picks[j], picks[i]];
       }
       const marks = picks.slice(0, markCount);
-
-      const current = getPlayerScore(roundNumber, color);
-      const base = typeof current === "number" ? current : 0;
-      const points = Math.min(MAX_SCORE, base + marks.length);
+      const points = Math.min(MAX_SCORE, marks.length);
 
       commitPlayerRoundScore(roundNumber, color, points, marks);
     });
@@ -722,10 +732,12 @@ const RoundModule = (() => {
   }
 
   function bindUi() {
-    indicatorEl?.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-round]");
-      if (!btn) return;
-      requestRound(Number(btn.dataset.round));
+    document.querySelectorAll(".round-indicator").forEach((indicator) => {
+      indicator.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-round]");
+        if (!btn || !indicator.contains(btn)) return;
+        requestRound(Number(btn.dataset.round));
+      });
     });
 
     document.querySelector(".column--right")?.addEventListener("click", (event) => {
@@ -767,6 +779,8 @@ const RoundModule = (() => {
       if (!scoreboardEl || scoreboardEl.hidden) return;
       // Keep summary visible when choosing another past round via the indicator
       if (event.target.closest("#round-indicator")) return;
+      if (event.target.closest("#board-round-indicator")) return;
+      if (event.target.closest("#board-module")) return;
       if (event.target.closest("#round-confirm")) return;
       if (event.target.closest("#score-module")) return;
       if (event.target.closest("#score-reset-confirm")) return;
@@ -837,11 +851,13 @@ const RoundModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
+    const podium = getPodium();
+    const winnerColors = (podium.first || []).map((entry) => entry.color);
     if (typeof BoardModule !== "undefined") {
-      BoardModule.setActive(false);
+      BoardModule.presentForWinner(winnerColors);
     }
     if (typeof WinnerModule !== "undefined") {
-      WinnerModule.open(getPodium());
+      WinnerModule.open(podium);
     }
     return true;
   }
@@ -923,6 +939,8 @@ const RoundModule = (() => {
     setPlayerScore,
     getPlayerScore,
     getPlayerMarks,
+    getIncomingMarkPoints,
+    getEffectiveRoundScore,
     commitPlayerRoundScore,
     clearPlayerRoundScore,
     isPlayerTabulated,

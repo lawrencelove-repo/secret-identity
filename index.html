@@ -531,7 +531,7 @@
         </div>
       </div>
       <!-- Keep in sync with CACHE_NAME in sw.js -->
-      <p class="app-version" id="app-version">v19</p>
+      <p class="app-version" id="app-version">v26</p>
     </div>
   </div>
 
@@ -612,7 +612,7 @@
         </label>
         <label class="settings-module__switch">
           <span class="settings-module__switch-text">
-            <span class="settings-module__switch-label">Animate cube moves</span>
+            <span class="settings-module__switch-label">Animate cube movement</span>
             <span class="settings-module__switch-hint">
               Hop player cubes zone-by-zone when scores change on the board.
             </span>
@@ -710,6 +710,9 @@
       aria-labelledby="winner-module-title"
     >
       <h2 class="winner-module__title" id="winner-module-title">Winner!</h2>
+      <p class="winner-module__tiebreak" id="winner-module-tiebreak" hidden>
+        As a tiebreaker, the winner is the person with the most Pictocards remaining.
+      </p>
       <div class="winner-module__first" id="winner-module-first"></div>
       <div class="winner-module__second-wrap" id="winner-module-second-wrap" hidden>
         <p class="winner-module__second-label">2nd place</p>
@@ -1053,6 +1056,18 @@
       </div>
       </div>
       </div>
+    </div>
+    <canvas class="board-module__fx" id="board-fx" aria-hidden="true"></canvas>
+    <div
+      class="round-indicator board-module__rounds"
+      id="board-round-indicator"
+      aria-label="Round selector"
+    >
+      <span class="round-indicator__label">Round:</span>
+      <button type="button" class="round-indicator__num" data-round="1">1</button>
+      <button type="button" class="round-indicator__num" data-round="2">2</button>
+      <button type="button" class="round-indicator__num" data-round="3">3</button>
+      <button type="button" class="round-indicator__num" data-round="4">4</button>
     </div>
   </div>
 
