@@ -375,6 +375,26 @@ const BoardModule = (() => {
   }
 
   /**
+   * One cube size for the whole board — based on a normal column cell, not the
+   * wide bridge (15) zone, so cubes don't grow when they land on 15.
+   */
+  function standardCubeSize(zones) {
+    const fromZones =
+      (zones && (zones[1] || zones[0] || zones[14] || zones[16])) || null;
+    if (fromZones?.width && fromZones?.height) {
+      return cubeSizeForCell(fromZones.width, fromZones.height);
+    }
+    const refCell =
+      trackEl?.querySelector('.board-track__cell[data-score="1"]') ||
+      trackEl?.querySelector('.board-track__cell[data-score="0"]') ||
+      trackEl?.querySelector('.board-track__cell:not([data-score="15"])');
+    if (!refCell) return 12;
+    const zone = measureZoneInCubesLayer(refCell);
+    if (!zone.width || !zone.height) return 12;
+    return cubeSizeForCell(zone.width, zone.height);
+  }
+
+  /**
    * Measure zone geometry in the cubes layer without board tilt/perspective
    * distorting getBoundingClientRect. Sync — browser won't paint mid-call.
    */
@@ -748,6 +768,8 @@ const BoardModule = (() => {
     pruneInactiveSeats(allColors);
     ensurePermanentSeats(allColors);
 
+    const size = standardCubeSize();
+
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
       const cell = trackEl?.querySelector(`.board-track__cell[data-score="${score}"]`);
@@ -755,8 +777,6 @@ const BoardModule = (() => {
 
       const zone = measureZoneInCubesLayer(cell);
       if (!zone.width || !zone.height) return;
-
-      const size = cubeSizeForCell(zone.width, zone.height);
 
       colors.forEach((colorId) => {
         const layout = layoutForColor(colorId, zone.width, zone.height, size);
@@ -782,12 +802,13 @@ const BoardModule = (() => {
 
     ensurePermanentSeats(movers.map((mover) => mover.color));
 
+    const size = standardCubeSize(zones);
+
     // Keep existing DOM cubes; ensure each mover exists.
     movers.forEach((mover) => {
       let cube = cubesEl?.querySelector(`.board-cube--${mover.color}`);
       const startZone = zones[mover.from] || zones[0];
       if (!startZone) return;
-      const size = cubeSizeForCell(startZone.width, startZone.height);
       const layout = layoutForColor(mover.color, startZone.width, startZone.height, size);
       if (!cube) {
         cube = buildCubeElement(mover.color, mover.from, size, startZone, layout);
@@ -822,7 +843,6 @@ const BoardModule = (() => {
         const zone = zones[state.current];
         if (!zone) return;
 
-        const size = cubeSizeForCell(zone.width, zone.height);
         const layout = layoutForColor(state.color, zone.width, zone.height, size);
         state.el.style.setProperty("--cube-size", `${size}px`);
         state.el.dataset.score = String(state.current);
