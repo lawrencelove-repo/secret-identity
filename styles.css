@@ -3955,9 +3955,6 @@ body.board-module-open .score-reset-confirm {
   overflow: visible;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  /* TEMP debug: show each scoring-zone corral boundary */
-  outline: 2px solid #ffe600;
-  outline-offset: -2px;
   background:
     linear-gradient(
       180deg,

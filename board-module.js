@@ -245,25 +245,17 @@ const BoardModule = (() => {
   }
 
   /**
-   * Eight seats (2 rows × 4 cols) as px offsets from the zone center.
-   * Leaves a center lane for the score number; keeps cubes inside fences.
+   * Eight seats in a single file across the zone (px from center).
+   * Leaves a small center gap so the score number stays readable.
    */
   function seatsForCell(cellWidth, cellHeight, cubeSize) {
-    const half = cubeSize / 2 + cubeSize * 0.1;
-    const fenceX = Math.max(cubeSize * 0.18, cellWidth * 0.04);
-    const fenceY = Math.max(cubeSize * 0.18, cellHeight * 0.1);
+    const half = cubeSize / 2 + cubeSize * 0.08;
+    const fenceX = Math.max(cubeSize * 0.12, cellWidth * 0.03);
     const maxX = Math.max(0, cellWidth / 2 - fenceX - half);
-    const maxY = Math.max(0, cellHeight / 2 - fenceY - half);
-    const xs = [-maxX, -maxX * 0.38, maxX * 0.38, maxX];
-    const ys = [-maxY, maxY];
-    /** @type {Array<[number, number]>} */
-    const seats = [];
-    ys.forEach((y) => {
-      xs.forEach((x) => {
-        seats.push([x, y]);
-      });
-    });
-    return seats;
+    // 8 seats: 4 left of center, 4 right — skip dead center for the number.
+    const left = [-maxX, -maxX * (5 / 7), -maxX * (3 / 7), -maxX * (1 / 7)];
+    const right = [maxX * (1 / 7), maxX * (3 / 7), maxX * (5 / 7), maxX];
+    return left.concat(right).map((x) => [x, 0]);
   }
 
   function shuffleIndexes(indexes, seed) {
@@ -286,18 +278,18 @@ const BoardModule = (() => {
   }
 
   function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v7:${score}:${colorIds.join(",")}`;
+    const seed = `v8:${score}:${colorIds.join(",")}`;
     const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
-    const jitterX = Math.min(cellWidth * 0.01, cubeSize * 0.1);
-    const jitterY = Math.min(cellHeight * 0.015, cubeSize * 0.1);
+    const jitterX = Math.min(cellWidth * 0.008, cubeSize * 0.08);
+    const jitterY = Math.min(cellHeight * 0.04, cubeSize * 0.12);
 
     colorIds.forEach((colorId, index) => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 7 &&
+        prior.version === 8 &&
         prior.score === score &&
         prior.cellKey === seed &&
         prior.index === index &&
@@ -310,14 +302,15 @@ const BoardModule = (() => {
       const seat = seats[slotIndexes[index]];
       const seedBase = `${seed}:${colorId}`;
       const layout = {
-        version: 7,
+        version: 8,
         score,
         cellKey: seed,
         index,
         cubeSize,
         x: seat[0] + randRange(`${seedBase}:x`, -jitterX, jitterX),
         y: seat[1] + randRange(`${seedBase}:y`, -jitterY, jitterY),
-        rot: randRange(`${seedBase}:r`, -10, 10),
+        // Azimuth: turn about the board-vertical axis (CSS Y when Z is out of board).
+        azimuth: randRange(`${seedBase}:az`, -10, 10),
       };
       cubeLayouts[colorId] = layout;
       layouts[colorId] = layout;
@@ -326,10 +319,13 @@ const BoardModule = (() => {
     return layouts;
   }
 
+  /** Largest cube that still fits 8 in a single file across the zone. */
   function cubeSizeForCell(cellWidth, cellHeight) {
-    const byH = cellHeight * 0.3;
-    const byW = cellWidth * 0.14;
-    return clamp(Math.min(byW, byH), 5, 12);
+    const fenceX = cellWidth * 0.03;
+    const gapFactor = 0.92; // small gutters between neighbors
+    const byW = ((cellWidth - 2 * fenceX) / 8) * gapFactor;
+    const byH = cellHeight * 0.62;
+    return clamp(Math.min(byW, byH), 5, 16);
   }
 
   /**
@@ -427,7 +423,7 @@ const BoardModule = (() => {
         cube.style.top = `${zone.cy}px`;
         cube.style.transform =
           `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
-          `rotateZ(${layout.rot}deg)`;
+          `rotateY(${layout.azimuth}deg)`;
 
         CUBE_FACES.forEach((face) => {
           const faceEl = document.createElement("div");
