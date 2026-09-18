@@ -246,27 +246,31 @@ const BoardModule = (() => {
 
   /**
    * Eight corral seats in px offsets from cell center.
-   * Outer band first, then inner — all kept inside the cell fences.
+   * Outer band first, then inner. Y is kept tight and slightly low so
+   * cube height under board tilt doesn't project into the next zone up.
    */
   function seatsForCell(cellWidth, cellHeight, cubeSize) {
-    const rotPad = cubeSize * 0.12; // bbox growth at ~±10° yaw
+    const rotPad = cubeSize * 0.12;
     const half = cubeSize / 2 + rotPad;
-    const fenceX = Math.max(cubeSize * 0.2, cellWidth * 0.045);
-    const fenceY = Math.max(cubeSize * 0.2, cellHeight * 0.08);
+    const fenceX = Math.max(cubeSize * 0.25, cellWidth * 0.05);
+    const fenceY = Math.max(cubeSize * 0.35, cellHeight * 0.14);
     const maxX = Math.max(0, cellWidth / 2 - fenceX - half);
     const maxY = Math.max(0, cellHeight / 2 - fenceY - half);
     const outerX = maxX;
-    const innerX = maxX * 0.42;
-    const y = maxY;
+    const innerX = maxX * 0.45;
+    // Keep both rows near the middle; bias downward (positive Y) away from the
+    // higher-scoring neighbor so elevated cube tops don't read as the next zone.
+    const yUp = -maxY * 0.35;
+    const yDown = maxY * 0.75;
     return [
-      [-outerX, -y],
-      [outerX, -y],
-      [-outerX, y],
-      [outerX, y],
-      [-innerX, -y],
-      [innerX, -y],
-      [-innerX, y],
-      [innerX, y],
+      [-outerX, yUp],
+      [outerX, yUp],
+      [-outerX, yDown],
+      [outerX, yDown],
+      [-innerX, yUp],
+      [innerX, yUp],
+      [-innerX, yDown],
+      [innerX, yDown],
     ];
   }
 
@@ -295,18 +299,18 @@ const BoardModule = (() => {
    * Assign each cube in a cell a unique corral seat (stable for color+score set).
    */
   function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v5:${score}:${colorIds.join(",")}`;
+    const seed = `v6:${score}:${colorIds.join(",")}`;
     const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
     const jitterX = Math.min(cellWidth * 0.008, cubeSize * 0.08);
-    const jitterY = Math.min(cellHeight * 0.012, cubeSize * 0.08);
+    const jitterY = Math.min(cellHeight * 0.01, cubeSize * 0.06);
 
     colorIds.forEach((colorId, index) => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 5 &&
+        prior.version === 6 &&
         prior.score === score &&
         prior.cellKey === seed &&
         prior.index === index &&
@@ -319,7 +323,7 @@ const BoardModule = (() => {
       const seat = seats[slotIndexes[index]];
       const seedBase = `${seed}:${colorId}`;
       const layout = {
-        version: 5,
+        version: 6,
         score,
         cellKey: seed,
         index,
@@ -340,24 +344,19 @@ const BoardModule = (() => {
    * with fence padding, yaw margin, and a clear center lane for the score.
    */
   function cubeSizeForCell(cellWidth, cellHeight) {
-    // Two rows must stay inside the cell after fences + ±10° rotation padding.
-    const byH = cellHeight * 0.26;
-    const byW = cellWidth * 0.13;
-    return clamp(Math.min(byW, byH), 3.5, 9);
+    // Two compact rows inside the cell after fences + yaw + 3D height margin.
+    const byH = cellHeight * 0.22;
+    const byW = cellWidth * 0.12;
+    return clamp(Math.min(byW, byH), 3.5, 8);
   }
 
-  /** Layout box of a cell inside the track (ignores 3D tilt projection). */
-  function cellLayoutInTrack(cell) {
-    return {
-      left: cell.offsetLeft,
-      top: cell.offsetTop,
-      width: cell.offsetWidth,
-      height: cell.offsetHeight,
-    };
+  function clearBoardCubes() {
+    trackEl?.querySelectorAll(".board-cube").forEach((cube) => cube.remove());
+    cubesEl?.replaceChildren();
   }
 
   function refreshCubes() {
-    if (!cubesEl || typeof RoundModule === "undefined") return;
+    if (!trackEl || typeof RoundModule === "undefined") return;
     ensureTrack();
 
     const active = RoundModule.gameStarted ? RoundModule.activeColors() : [];
@@ -374,22 +373,19 @@ const BoardModule = (() => {
       byScore[score].push(colorId);
     });
 
-    cubesEl.replaceChildren();
-    const trackW = trackEl.offsetWidth;
-    const trackH = trackEl.offsetHeight;
-    if (!trackW || !trackH) return;
+    clearBoardCubes();
 
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
-      const cell = trackEl?.querySelector(`.board-track__cell[data-score="${score}"]`);
-      if (!cell || !trackEl) return;
+      const cell = trackEl.querySelector(`.board-track__cell[data-score="${score}"]`);
+      if (!cell) return;
 
-      // Use layout sizes — getBoundingClientRect is distorted by board tilt.
-      const box = cellLayoutInTrack(cell);
-      if (!box.width || !box.height) return;
+      const cellW = cell.clientWidth;
+      const cellH = cell.clientHeight;
+      if (!cellW || !cellH) return;
 
-      const size = cubeSizeForCell(box.width, box.height);
-      const layouts = layoutsForCell(colors, score, box.width, box.height, size);
+      const size = cubeSizeForCell(cellW, cellH);
+      const layouts = layoutsForCell(colors, score, cellW, cellH, size);
 
       colors.forEach((colorId) => {
         const layout = layouts[colorId];
@@ -404,7 +400,9 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        // Center on the track plane; lift by half-size so the bottom face rests on z=0.
+        // Position inside this corral cell — avoids track/cubes-layer coordinate drift.
+        cube.style.left = "50%";
+        cube.style.top = "50%";
         cube.style.transform =
           `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
           `rotateZ(${layout.rot}deg)`;
@@ -416,11 +414,7 @@ const BoardModule = (() => {
           cube.appendChild(faceEl);
         });
 
-        const cx = ((box.left + box.width / 2) / trackW) * 100;
-        const cy = ((box.top + box.height / 2) / trackH) * 100;
-        cube.style.left = `${cx}%`;
-        cube.style.top = `${cy}%`;
-        cubesEl.appendChild(cube);
+        cell.appendChild(cube);
       });
     });
   }

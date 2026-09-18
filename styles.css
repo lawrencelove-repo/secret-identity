@@ -3920,11 +3920,15 @@ body.board-module-open .score-reset-confirm {
     "bridge bridge bridge"
     "left   .      right";
   gap: 0;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-track__column {
   display: flex;
   flex-direction: column;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-track__column--left {
@@ -3948,6 +3952,9 @@ body.board-module-open .score-reset-confirm {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   background:
     linear-gradient(
       180deg,
