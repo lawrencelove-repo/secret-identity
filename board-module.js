@@ -245,23 +245,30 @@ const BoardModule = (() => {
   }
 
   /**
-   * Eight corral seats: outer corners first, then nearer the number.
-   * All seats stay off-center so the printed score stays readable
-   * until the corral is full (max 8 — still no center seat).
-   * Values are fractions of cell width/height from the cell center.
+   * Eight corral seats in px offsets from cell center.
+   * Outer band first, then inner — all kept inside the cell fences.
    */
-  const CELL_SLOT_FRACTIONS = [
-    // Outer band (filled first)
-    [-0.33, -0.27],
-    [0.33, -0.27],
-    [-0.33, 0.27],
-    [0.33, 0.27],
-    // Inner band (closer to number, filled after outers)
-    [-0.15, -0.27],
-    [0.15, -0.27],
-    [-0.15, 0.27],
-    [0.15, 0.27],
-  ];
+  function seatsForCell(cellWidth, cellHeight, cubeSize) {
+    const rotPad = cubeSize * 0.12; // bbox growth at ~±10° yaw
+    const half = cubeSize / 2 + rotPad;
+    const fenceX = Math.max(cubeSize * 0.2, cellWidth * 0.045);
+    const fenceY = Math.max(cubeSize * 0.2, cellHeight * 0.08);
+    const maxX = Math.max(0, cellWidth / 2 - fenceX - half);
+    const maxY = Math.max(0, cellHeight / 2 - fenceY - half);
+    const outerX = maxX;
+    const innerX = maxX * 0.42;
+    const y = maxY;
+    return [
+      [-outerX, -y],
+      [outerX, -y],
+      [-outerX, y],
+      [outerX, y],
+      [-innerX, -y],
+      [innerX, -y],
+      [-innerX, y],
+      [innerX, y],
+    ];
+  }
 
   function shuffleIndexes(indexes, seed) {
     const list = indexes.slice();
@@ -288,18 +295,18 @@ const BoardModule = (() => {
    * Assign each cube in a cell a unique corral seat (stable for color+score set).
    */
   function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v4:${score}:${colorIds.join(",")}`;
+    const seed = `v5:${score}:${colorIds.join(",")}`;
+    const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
-    // Keep jitter tiny so cubes stay inside fences and don't collide.
-    const jitterX = Math.min(cellWidth * 0.012, cubeSize * 0.12);
-    const jitterY = Math.min(cellHeight * 0.02, cubeSize * 0.12);
+    const jitterX = Math.min(cellWidth * 0.008, cubeSize * 0.08);
+    const jitterY = Math.min(cellHeight * 0.012, cubeSize * 0.08);
 
     colorIds.forEach((colorId, index) => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 4 &&
+        prior.version === 5 &&
         prior.score === score &&
         prior.cellKey === seed &&
         prior.index === index &&
@@ -309,17 +316,17 @@ const BoardModule = (() => {
         return;
       }
 
-      const slot = CELL_SLOT_FRACTIONS[slotIndexes[index]];
+      const seat = seats[slotIndexes[index]];
       const seedBase = `${seed}:${colorId}`;
       const layout = {
-        version: 4,
+        version: 5,
         score,
         cellKey: seed,
         index,
         cubeSize,
-        x: slot[0] * cellWidth + randRange(`${seedBase}:x`, -jitterX, jitterX),
-        y: slot[1] * cellHeight + randRange(`${seedBase}:y`, -jitterY, jitterY),
-        rot: randRange(`${seedBase}:r`, -6, 6),
+        x: seat[0] + randRange(`${seedBase}:x`, -jitterX, jitterX),
+        y: seat[1] + randRange(`${seedBase}:y`, -jitterY, jitterY),
+        rot: randRange(`${seedBase}:r`, -10, 10),
       };
       cubeLayouts[colorId] = layout;
       layouts[colorId] = layout;
@@ -330,18 +337,23 @@ const BoardModule = (() => {
 
   /**
    * Cube side length from a corral's box so 8 cubes fit in a 2×4 seat grid
-   * with fence padding and a clear center lane for the score number.
+   * with fence padding, yaw margin, and a clear center lane for the score.
    */
   function cubeSizeForCell(cellWidth, cellHeight) {
-    const padX = 0.08;
-    const padY = 0.10;
-    const centerGapX = 0.24;
-    const usableW = cellWidth * (1 - 2 * padX - centerGapX);
-    const usableH = cellHeight * (1 - 2 * padY);
-    // Two cubes per side of the number, two rows — leave ~15% gutters between seats.
-    const byW = (usableW / 2) * 0.82;
-    const byH = (usableH / 2) * 0.82;
-    return clamp(Math.min(byW, byH), 4, 11);
+    // Two rows must stay inside the cell after fences + ±10° rotation padding.
+    const byH = cellHeight * 0.26;
+    const byW = cellWidth * 0.13;
+    return clamp(Math.min(byW, byH), 3.5, 9);
+  }
+
+  /** Layout box of a cell inside the track (ignores 3D tilt projection). */
+  function cellLayoutInTrack(cell) {
+    return {
+      left: cell.offsetLeft,
+      top: cell.offsetTop,
+      width: cell.offsetWidth,
+      height: cell.offsetHeight,
+    };
   }
 
   function refreshCubes() {
@@ -363,21 +375,21 @@ const BoardModule = (() => {
     });
 
     cubesEl.replaceChildren();
+    const trackW = trackEl.offsetWidth;
+    const trackH = trackEl.offsetHeight;
+    if (!trackW || !trackH) return;
 
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
       const cell = trackEl?.querySelector(`.board-track__cell[data-score="${score}"]`);
       if (!cell || !trackEl) return;
 
-      const trackRect = trackEl.getBoundingClientRect();
-      const cellRect = cell.getBoundingClientRect();
-      if (!trackRect.width || !trackRect.height) return;
+      // Use layout sizes — getBoundingClientRect is distorted by board tilt.
+      const box = cellLayoutInTrack(cell);
+      if (!box.width || !box.height) return;
 
-      // Undo parent scale so layout uses unscaled cell metrics.
-      const cellW = cellRect.width / scale;
-      const cellH = cellRect.height / scale;
-      const size = cubeSizeForCell(cellW, cellH);
-      const layouts = layoutsForCell(colors, score, cellW, cellH, size);
+      const size = cubeSizeForCell(box.width, box.height);
+      const layouts = layoutsForCell(colors, score, box.width, box.height, size);
 
       colors.forEach((colorId) => {
         const layout = layouts[colorId];
@@ -404,10 +416,8 @@ const BoardModule = (() => {
           cube.appendChild(faceEl);
         });
 
-        const cx =
-          ((cellRect.left + cellRect.width / 2 - trackRect.left) / trackRect.width) * 100;
-        const cy =
-          ((cellRect.top + cellRect.height / 2 - trackRect.top) / trackRect.height) * 100;
+        const cx = ((box.left + box.width / 2) / trackW) * 100;
+        const cy = ((box.top + box.height / 2) / trackH) * 100;
         cube.style.left = `${cx}%`;
         cube.style.top = `${cy}%`;
         cubesEl.appendChild(cube);
