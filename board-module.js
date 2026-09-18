@@ -283,7 +283,7 @@ const BoardModule = (() => {
   }
 
   function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v8:${score}:${colorIds.join(",")}`;
+    const seed = `v9:${score}:${colorIds.join(",")}`;
     const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
@@ -294,7 +294,7 @@ const BoardModule = (() => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 8 &&
+        prior.version === 9 &&
         prior.score === score &&
         prior.cellKey === seed &&
         prior.index === index &&
@@ -314,7 +314,7 @@ const BoardModule = (() => {
         cubeSize,
         x: seat[0] + randRange(`${seedBase}:x`, -jitterX, jitterX),
         y: seat[1] + randRange(`${seedBase}:y`, -jitterY, jitterY),
-        // Azimuth: turn about the board-vertical axis (CSS Y when Z is out of board).
+        // Azimuth: spin about the board normal (vertical). No tip — stays upright.
         azimuth: randRange(`${seedBase}:az`, -10, 10),
       };
       cubeLayouts[colorId] = layout;
@@ -429,7 +429,7 @@ const BoardModule = (() => {
         cube.style.top = `${zone.cy}px`;
         cube.style.transform =
           `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
-          `rotateY(${layout.azimuth}deg)`;
+          `rotateZ(${layout.azimuth}deg)`;
 
         CUBE_FACES.forEach((face) => {
           const faceEl = document.createElement("div");
@@ -690,9 +690,9 @@ const BoardModule = (() => {
       const midpoint = threeFingerMidpoint(event.touches);
       const dx = midpoint.x - tiltGesture.startX;
       const dy = midpoint.y - tiltGesture.startY;
-      // Horizontal → spin board (azimuth); vertical → tip toward/away.
+      // Horizontal → spin board (azimuth). Left swipe → clockwise.
       azimuth = clamp(
-        tiltGesture.originAzimuth + dx * AZIMUTH_SENSITIVITY,
+        tiltGesture.originAzimuth - dx * AZIMUTH_SENSITIVITY,
         MIN_AZIMUTH,
         MAX_AZIMUTH
       );
