@@ -16,7 +16,31 @@ const BoardModule = (() => {
   const MIN_TILT_Y = -48;
   const MAX_TILT_Y = 48;
   const PAN_CLICK_THRESHOLD = 6;
-  const CUBE_FACES = ["front", "right", "top"];
+  /** Isometric cube path geometry (equal edge lengths in world space). */
+  const CUBE_SVG_NS = "http://www.w3.org/2000/svg";
+  // Side length N=16 in isometric: top + vertical edges share length N.
+  const CUBE_SVG_VB = { w: 32, h: 32 };
+  const CUBE_SVG_PATHS = {
+    left: "M0 8 L16 16 L16 32 L0 24 Z",
+    right: "M32 8 L16 16 L16 32 L32 24 Z",
+    top: "M16 0 L32 8 L16 16 L0 8 Z",
+  };
+
+  function buildCubeSvg() {
+    const svg = document.createElementNS(CUBE_SVG_NS, "svg");
+    svg.setAttribute("class", "board-cube__svg");
+    svg.setAttribute("viewBox", `0 0 ${CUBE_SVG_VB.w} ${CUBE_SVG_VB.h}`);
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    ["left", "right", "top"].forEach((face) => {
+      const path = document.createElementNS(CUBE_SVG_NS, "path");
+      path.setAttribute("class", `board-cube__svg-face board-cube__svg-face--${face}`);
+      path.setAttribute("d", CUBE_SVG_PATHS[face]);
+      svg.appendChild(path);
+    });
+    return svg;
+  }
 
   const SECTION_COLORS = {
     yellow: { mid: "#e8c230", light: "#f2d85a", dark: "#c9a018" },
@@ -357,7 +381,7 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        // Footprint sits on the track plane; yaw only (height is drawn in CSS).
+        // Footprint center on the track; SVG draws equal-edged isometric cube above it.
         cube.style.transform =
           `translate(${layout.x}px, ${layout.y}px) rotate(${layout.rot}deg)`;
 
@@ -365,13 +389,7 @@ const BoardModule = (() => {
         shadow.className = "board-cube__shadow";
         shadow.setAttribute("aria-hidden", "true");
         cube.appendChild(shadow);
-
-        CUBE_FACES.forEach((face) => {
-          const faceEl = document.createElement("span");
-          faceEl.className = `board-cube__face board-cube__face--${face}`;
-          faceEl.setAttribute("aria-hidden", "true");
-          cube.appendChild(faceEl);
-        });
+        cube.appendChild(buildCubeSvg());
 
         const cx =
           ((cellRect.left + cellRect.width / 2 - trackRect.left) / trackRect.width) * 100;

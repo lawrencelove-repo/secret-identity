@@ -2508,13 +2508,23 @@ body.is-boot .new-game-module__backdrop {
   background: transparent;
 }
 
+.new-game-module__stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: min(92vw, 560px);
+}
+
 .new-game-module__dialog {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(92vw, 560px);
+  width: 100%;
   padding: clamp(1.5rem, 3.5vw, 2.25rem);
   background:
     linear-gradient(
@@ -2527,6 +2537,18 @@ body.is-boot .new-game-module__backdrop {
   border: 2px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
   text-align: center;
+}
+
+.app-version {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: "Oswald", "Arial Narrow", sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  user-select: none;
+  pointer-events: none;
 }
 
 .new-game-module__title {
@@ -4015,79 +4037,72 @@ body.board-module-open .score-reset-confirm {
   inset: 2.5%;
   pointer-events: none;
   z-index: 5;
+  overflow: visible;
 }
 
 .board-cube {
-  /* Footprint on the track's top plane. Side length S = H = W = L. */
+  /* Anchor = center of the cube's contact patch on the track plane. */
   --cube-size: 18px;
+  --cube-top: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
+  --cube-left: color-mix(in srgb, var(--cube-color) 72%, #000 28%);
+  --cube-right: color-mix(in srgb, var(--cube-color) 55%, #000 45%);
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
   margin-left: calc(var(--cube-size) / -2);
-  margin-top: calc(var(--cube-size) / -2);
+  /* Bottom vertex of the isometric cube sits on the track plane. */
+  margin-top: calc(var(--cube-size) * -1);
   pointer-events: auto;
   cursor: pointer;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
+  overflow: visible;
 }
 
-/* Soft contact shadow on the board surface (same plane as the footprint). */
+/* Contact shadow on the board, under the isometric cube. */
 .board-cube__shadow {
   position: absolute;
-  inset: 6%;
-  border-radius: 18%;
-  background: rgba(0, 0, 0, 0.38);
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
   z-index: 0;
   pointer-events: none;
 }
 
-/*
- * 2.5D cube: equal S×S faces. Height is extruded along board -Y so it reads
- * as standing on the track under the board's rotateX tilt (true CSS 3D faces
- * were flattening to a single plane in this view stack).
- */
-.board-cube__face {
+/* Drawn cube: equal edge lengths (isometric projection of a true cube). */
+.board-cube__svg {
   position: absolute;
   left: 0;
-  top: 0;
-  width: var(--cube-size);
-  height: var(--cube-size);
-  box-sizing: border-box;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
   pointer-events: none;
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.34) 0%,
-      transparent 42%,
-      rgba(0, 0, 0, 0.2) 100%
-    ),
-    var(--cube-face-tint, var(--cube-color));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
-}
-
-/* South face: paints the footprint; bottom edge = board contact. */
-.board-cube__face--front {
   z-index: 1;
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 78%, #000 22%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
 
-/* East face: foreshortened wall for side volume. */
-.board-cube__face--right {
-  z-index: 2;
-  width: calc(var(--cube-size) * 0.42);
-  transform: translate(100%, -100%) skewY(-32deg);
-  transform-origin: left bottom;
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 62%, #000 38%);
+.board-cube__svg-face {
+  stroke: rgba(0, 0, 0, 0.22);
+  stroke-width: 0.4;
+  stroke-linejoin: round;
 }
 
-/* Top face: one side-length "up" the board from the footprint. */
-.board-cube__face--top {
-  z-index: 3;
-  transform: translateY(-100%);
-  --cube-face-tint: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
+.board-cube__svg-face--top {
+  fill: var(--cube-top, var(--cube-color));
+}
+
+.board-cube__svg-face--left {
+  fill: var(--cube-left, var(--cube-color));
+}
+
+.board-cube__svg-face--right {
+  fill: var(--cube-right, var(--cube-color));
 }
 
 .board-cube--green { --cube-color: var(--color-green); }

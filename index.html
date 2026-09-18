@@ -508,26 +508,30 @@
     aria-hidden="true"
   >
     <div class="new-game-module__backdrop"></div>
-    <div
-      class="new-game-module__dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="new-game-title"
-    >
-      <h2 class="new-game-module__title" id="new-game-title">New Game</h2>
-      <p class="new-game-module__count-label">
-        Players: <span id="new-game-count">0</span>
-      </p>
-      <div class="new-game-module__colors" id="new-game-colors"></div>
-      <p class="new-game-module__hint">Tap any colors to choose players. At least 2 required to start.</p>
-      <div class="new-game-module__actions">
-        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-new-game-cancel>
-          Cancel
-        </button>
-        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-new-game-start>
-          Start
-        </button>
+    <div class="new-game-module__stack">
+      <div
+        class="new-game-module__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-game-title"
+      >
+        <h2 class="new-game-module__title" id="new-game-title">New Game</h2>
+        <p class="new-game-module__count-label">
+          Players: <span id="new-game-count">0</span>
+        </p>
+        <div class="new-game-module__colors" id="new-game-colors"></div>
+        <p class="new-game-module__hint">Tap any colors to choose players. At least 2 required to start.</p>
+        <div class="new-game-module__actions">
+          <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-new-game-cancel>
+            Cancel
+          </button>
+          <button type="button" class="new-game-module__btn new-game-module__btn--start" data-new-game-start>
+            Start
+          </button>
+        </div>
       </div>
+      <!-- Keep in sync with CACHE_NAME in sw.js -->
+      <p class="app-version" id="app-version">v7</p>
     </div>
   </div>
 
