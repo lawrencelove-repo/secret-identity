@@ -24,8 +24,7 @@ const BoardModule = (() => {
   const CELEBRATION_TILT_Y = -10;
   const CELEBRATION_SPIN_DEG_PER_SEC = 10;
   const CELEBRATION_IDLE_MS = 10000;
-  const CELEBRATION_BURST_MS = 900;
-  const FX_COLORS = ["#ffd54a", "#ff5a5a", "#7ec8ff", "#ffffff", "#ff9f43", "#c56cff", "#7dffb3"];
+  const CELEBRATION_BURST_MS = 1100;
   const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
@@ -58,8 +57,12 @@ const BoardModule = (() => {
   const assemblyEl = root?.querySelector(".board-module__assembly");
   const trackEl = document.getElementById("board-track");
   const cubesEl = document.getElementById("board-cubes");
-  const fxCanvas = document.getElementById("board-fx");
+  const fxEl = document.getElementById("board-fx");
   const toggle = document.getElementById("board-module-toggle");
+  const FireworksCtor =
+    typeof Fireworks !== "undefined"
+      ? Fireworks.Fireworks || Fireworks.default || null
+      : null;
 
   let built = false;
   let scale = 1;
@@ -96,8 +99,8 @@ const BoardModule = (() => {
   let celebrationRaf = 0;
   let celebrationLastTs = 0;
   let celebrationBurstAcc = 0;
-  /** @type {Array<{ x: number, y: number, vx: number, vy: number, life: number, age: number, color: string, size: number }>} */
-  let fxParticles = [];
+  /** @type {InstanceType<any> | null} */
+  let fireworksInstance = null;
 
   function isActive() {
     return document.body.classList.contains("board-module-open");
@@ -460,25 +463,67 @@ const BoardModule = (() => {
     return typeof AppSettings !== "undefined" && AppSettings.getAnimateCubeMoves();
   }
 
-  function resizeFxCanvas() {
-    if (!fxCanvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    fxCanvas.width = Math.max(1, Math.floor(w * dpr));
-    fxCanvas.height = Math.max(1, Math.floor(h * dpr));
-    fxCanvas.style.width = `${w}px`;
-    fxCanvas.style.height = `${h}px`;
-    const ctx = fxCanvas.getContext("2d");
-    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function getFireworksApi() {
+    return FireworksCtor;
+  }
+
+  function ensureFireworks() {
+    if (!fxEl || !getFireworksApi()) return null;
+    if (fireworksInstance) return fireworksInstance;
+    fireworksInstance = new FireworksCtor(fxEl, {
+      autoresize: true,
+      opacity: 0.92,
+      acceleration: 1.05,
+      friction: 0.97,
+      gravity: 1.55,
+      particles: 70,
+      explosion: 6,
+      intensity: 4,
+      traceLength: 3,
+      traceSpeed: 12,
+      flickering: 45,
+      hue: { min: 0, max: 360 },
+      delay: { min: 40, max: 70 },
+      rocketsPoint: { min: 25, max: 75 },
+      mouse: { click: false, move: false, max: 1 },
+      sound: { enabled: false },
+    });
+    return fireworksInstance;
+  }
+
+  function resizeFireworks() {
+    if (!fireworksInstance) return;
+    fireworksInstance.updateSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
   }
 
   function clearFireworks() {
-    fxParticles = [];
-    if (!fxCanvas) return;
-    const ctx = fxCanvas.getContext("2d");
-    if (ctx) ctx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-    fxCanvas.classList.remove("is-active");
+    if (fireworksInstance) {
+      try {
+        fireworksInstance.stop(true);
+      } catch {
+        /* ignore */
+      }
+      fireworksInstance = null;
+    }
+    fxEl?.classList.remove("is-active");
+    if (fxEl) fxEl.replaceChildren();
+  }
+
+  function pauseFireworksDisplay() {
+    if (!fireworksInstance) {
+      fxEl?.classList.remove("is-active");
+      return;
+    }
+    try {
+      fireworksInstance.clear();
+      fireworksInstance.stop();
+    } catch {
+      /* ignore */
+    }
+    fxEl?.classList.remove("is-active");
   }
 
   /** Fireworks only on the final round while celebrating a finished game. */
@@ -490,84 +535,64 @@ const BoardModule = (() => {
     );
   }
 
+  function launchFromWinnerCubes() {
+    const fw = fireworksInstance;
+    if (!fw || !fireworksAllowed()) return;
+    const width = window.innerWidth || 1;
+    celebrationColors.forEach((colorId) => {
+      const cube = cubesEl?.querySelector(`.board-cube--${colorId}`);
+      if (!cube) return;
+      const rect = cube.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const xPercent = ((rect.left + rect.width / 2) / width) * 100;
+      fw.updateOptions({
+        rocketsPoint: {
+          min: Math.max(0, xPercent - 3),
+          max: Math.min(100, xPercent + 3),
+        },
+      });
+      fw.launch(1);
+    });
+  }
+
+  function startFireworksDisplay() {
+    const fw = ensureFireworks();
+    if (!fw || !fireworksAllowed() || !fxEl) return;
+    fxEl.classList.add("is-active");
+    resizeFireworks();
+    if (!fw.isRunning) fw.start();
+    launchFromWinnerCubes();
+  }
+
   function syncFireworksForViewingRound() {
     if (!celebrationActive) return;
     if (fireworksAllowed()) {
-      fxCanvas?.classList.add("is-active");
-      // Burst on the next celebration frame when returning to round 4.
+      startFireworksDisplay();
       celebrationBurstAcc = CELEBRATION_BURST_MS;
       return;
     }
-    fxParticles = [];
-    if (!fxCanvas) return;
-    const ctx = fxCanvas.getContext("2d");
-    if (ctx) ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-    fxCanvas.classList.remove("is-active");
-  }
-
-  function burstFireworksFromColor(colorId) {
-    if (!fireworksAllowed()) return;
-    const cube = cubesEl?.querySelector(`.board-cube--${colorId}`);
-    if (!cube) return;
-    const rect = cube.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const count = 26 + Math.floor(Math.random() * 10);
-    for (let i = 0; i < count; i += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 90 + Math.random() * 240;
-      fxParticles.push({
-        x: cx + (Math.random() - 0.5) * 8,
-        y: cy + (Math.random() - 0.5) * 8,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 50,
-        life: 0.55 + Math.random() * 0.85,
-        age: 0,
-        color: FX_COLORS[i % FX_COLORS.length],
-        size: 1.6 + Math.random() * 3.2,
-      });
-    }
+    pauseFireworksDisplay();
   }
 
   function updateFireworks(dt) {
-    if (!fxCanvas || !celebrationActive) return;
+    if (!celebrationActive) return;
     if (!fireworksAllowed()) {
-      if (fxParticles.length || fxCanvas.classList.contains("is-active")) {
-        syncFireworksForViewingRound();
+      if (fxEl?.classList.contains("is-active") || fireworksInstance?.isRunning) {
+        pauseFireworksDisplay();
       }
       return;
     }
 
-    const ctx = fxCanvas.getContext("2d");
-    if (!ctx) return;
+    const fw = ensureFireworks();
+    if (!fw || !fxEl) return;
+    fxEl.classList.add("is-active");
+    if (!fw.isRunning) fw.start();
 
-    fxCanvas.classList.add("is-active");
     celebrationBurstAcc += dt * 1000;
     if (celebrationBurstAcc >= CELEBRATION_BURST_MS) {
       celebrationBurstAcc = 0;
-      celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+      launchFromWinnerCubes();
     }
-
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    ctx.clearRect(0, 0, w, h);
-
-    fxParticles = fxParticles.filter((p) => {
-      p.age += dt;
-      if (p.age >= p.life) return false;
-      p.vy += 420 * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      const t = 1 - p.age / p.life;
-      ctx.globalAlpha = Math.max(0, t);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (0.55 + 0.45 * t), 0, Math.PI * 2);
-      ctx.fill();
-      return true;
-    });
-    ctx.globalAlpha = 1;
   }
 
   function noteCelebrationActivity() {
@@ -609,11 +634,10 @@ const BoardModule = (() => {
     tiltY = CELEBRATION_TILT_Y;
     applyTilt();
 
-    resizeFxCanvas();
-    fxCanvas?.classList.toggle("is-active", fireworksAllowed());
-    fxParticles = [];
     if (fireworksAllowed()) {
-      celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+      startFireworksDisplay();
+    } else {
+      pauseFireworksDisplay();
     }
     syncCubeTabulatedStates();
 
@@ -1390,7 +1414,7 @@ const BoardModule = (() => {
 
   window.addEventListener("resize", () => {
     if (isActive()) refreshCubes();
-    if (celebrationActive) resizeFxCanvas();
+    if (celebrationActive) resizeFireworks();
   });
 
   bindViewport();
