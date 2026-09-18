@@ -691,25 +691,34 @@ body.is-boot .stage {
   background: rgba(0, 0, 0, 0.35);
 }
 
-.round-indicator__num.is-current,
+/* Selected / viewing round — strong red + black ring so it stands out. */
 .round-indicator__num.is-viewing {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.28);
+  border: 3px solid #e85a5a;
+  background: rgba(0, 0, 0, 0.62);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(232, 90, 90, 0.4);
 }
 
+/* Active game round when you're viewing a different (past) round. */
 .round-indicator__num.is-current:not(.is-viewing) {
-  color: rgba(255, 255, 255, 0.82);
-  border-color: rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
+  color: rgba(255, 255, 255, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
 }
 
 .round-indicator__num:hover,
 .round-indicator__num:focus-visible {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.9);
+  outline: none;
+}
+
+.round-indicator__num.is-viewing:hover,
+.round-indicator__num.is-viewing:focus-visible {
+  border-color: #f07878;
   outline: none;
 }
 
