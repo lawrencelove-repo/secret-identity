@@ -50,9 +50,7 @@ const SettingsModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
-    if (typeof BoardModule !== "undefined") {
-      BoardModule.setActive(false);
-    }
+    // Keep the board open underneath so closing settings returns there.
     syncInputs();
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");

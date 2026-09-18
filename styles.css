@@ -3753,7 +3753,8 @@ body.board-module-open .character-replace-confirm,
 body.board-module-open .character-specify-module,
 body.board-module-open .score-module,
 body.board-module-open .score-reset-confirm,
-body.board-module-open .round-confirm {
+body.board-module-open .round-confirm,
+body.board-module-open .settings-module {
   z-index: 1700;
 }
 
