@@ -314,7 +314,7 @@ const BoardModule = (() => {
     const assembly = root?.querySelector(".board-module__assembly");
     const size = assembly?.getBoundingClientRect().width / (scale || 1) || 400;
     // True cube side length (H = W = L), sized relative to the board face.
-    return clamp(size * 0.038, 14, 28);
+    return clamp(size * 0.042, 16, 30);
   }
 
   function refreshCubes() {

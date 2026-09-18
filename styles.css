@@ -3800,7 +3800,7 @@ body.board-module-open .score-reset-confirm {
   --card-long: calc(var(--board-size) * 0.30);
   --card-short: calc(var(--board-size) * 0.112);
   --frame-inset: calc(var(--board-size) * 0.155);
-  --board-depth: calc(var(--board-size) * 0.045);
+  --board-depth: calc(var(--board-size) * 0.014);
   position: relative;
   width: var(--board-size);
   height: var(--board-size);
@@ -3858,6 +3858,7 @@ body.board-module-open .score-reset-confirm {
   bottom: 0;
   height: var(--board-depth);
   transform-origin: bottom center;
+  /* Fold the strip down into -Z (below the top face at z=0). */
   transform: rotateX(90deg);
 }
 
@@ -3898,8 +3899,8 @@ body.board-module-open .score-reset-confirm {
 .board-module__track-wrap {
   position: absolute;
   inset: 7%;
-  /* Coplanar with the frame's top face (z = 0). Cubes sit on this plane. */
-  transform: translateZ(0);
+  /* Slightly above the frame top so the track isn't z-fighting the slab. */
+  transform: translateZ(0.5px);
   border: 1.5px solid rgba(196, 164, 90, 0.55);
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.45),
@@ -4033,11 +4034,16 @@ body.board-module-open .score-reset-confirm {
 }
 
 .board-cubes {
+  /* Match the track interior; assembly sibling so cubes sit above the frame top. */
+  --frame-span: calc(100% - 2 * var(--frame-inset));
+  --wrap-inset: calc(var(--frame-span) * 0.07);
+  --track-inset: calc((var(--frame-span) - 2 * var(--wrap-inset)) * 0.025);
   position: absolute;
-  inset: 2.5%;
+  inset: calc(var(--frame-inset) + var(--wrap-inset) + var(--track-inset));
   pointer-events: none;
-  z-index: 5;
+  z-index: 4;
   overflow: visible;
+  transform: translateZ(1px);
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
 }
@@ -4121,7 +4127,7 @@ body.board-module-open .score-reset-confirm {
 .board-cube--purple { --cube-color: var(--color-purple); }
 .board-cube--light-blue { --cube-color: var(--color-light-blue); }
 
-/* Character cards around the board */
+/* Character cards around the board — sit on the board's bottom plane. */
 .board-card {
   position: absolute;
   z-index: 3;
@@ -4136,7 +4142,9 @@ body.board-module-open .score-reset-confirm {
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transform: translateZ(calc(var(--board-depth) * -1));
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-card:disabled {
@@ -4165,7 +4173,8 @@ body.board-module-open .score-reset-confirm {
   line-height: 1;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   pointer-events: none;
-  transform: translateZ(6px);
+  /* Lift badge from card bottom-plane up onto the frame top. */
+  transform: translateZ(calc(var(--board-depth) + 2px));
 }
 
 .board-card__body {
@@ -4186,7 +4195,7 @@ body.board-module-open .score-reset-confirm {
     0 1px 3px rgba(0, 0, 0, 0.25);
   color: #fff;
   overflow: hidden;
-  transform: translateZ(4px);
+  transform: translateZ(0);
 }
 
 .board-card--empty .board-card__body {
@@ -4236,7 +4245,7 @@ body.board-module-open .score-reset-confirm {
   position: absolute;
   bottom: calc(var(--frame-inset) * 0.38);
   left: 50%;
-  transform: translateX(-50%) translateZ(-2px);
+  transform: translateX(-50%);
 }
 
 /* Badges sit on the black frame, inward from the cards */
@@ -4244,7 +4253,7 @@ body.board-module-open .score-reset-confirm {
 .board-card--8 .board-card__badge {
   top: calc(var(--frame-inset) * 0.18);
   left: 50%;
-  transform: translateX(-50%) translateZ(8px);
+  transform: translateX(-50%) translateZ(calc(var(--board-depth) + 2px));
 }
 
 /* Top edge: slots 4 (left) and 5 (right) — cards extend upward */
@@ -4263,7 +4272,7 @@ body.board-module-open .score-reset-confirm {
   position: absolute;
   top: calc(var(--frame-inset) * 0.38);
   left: 50%;
-  transform: translateX(-50%) translateZ(-2px);
+  transform: translateX(-50%);
 }
 
 .board-card--4 .board-card__badge,
@@ -4271,7 +4280,7 @@ body.board-module-open .score-reset-confirm {
   bottom: calc(var(--frame-inset) * 0.18);
   top: auto;
   left: 50%;
-  transform: translateX(-50%) translateZ(8px);
+  transform: translateX(-50%) translateZ(calc(var(--board-depth) + 2px));
 }
 
 /* Left edge: slots 2 (bottom) and 3 (top) — cards extend leftward */
@@ -4294,7 +4303,7 @@ body.board-module-open .score-reset-confirm {
   left: calc(var(--frame-inset) * 0.62);
   width: var(--card-long);
   height: var(--card-short);
-  transform: translate(-50%, -50%) rotate(-90deg) translateZ(6px);
+  transform: translate(-50%, -50%) rotate(-90deg);
   transform-origin: center center;
 }
 
@@ -4303,7 +4312,7 @@ body.board-module-open .score-reset-confirm {
   top: 50%;
   right: calc(var(--frame-inset) * 0.12);
   left: auto;
-  transform: translateY(-50%) translateZ(10px);
+  transform: translateY(-50%) translateZ(calc(var(--board-depth) + 2px));
 }
 
 /* Right edge: slots 6 (top) and 7 (bottom) — cards extend rightward */
@@ -4327,7 +4336,7 @@ body.board-module-open .score-reset-confirm {
   left: auto;
   width: var(--card-long);
   height: var(--card-short);
-  transform: translate(50%, -50%) rotate(90deg) translateZ(6px);
+  transform: translate(50%, -50%) rotate(90deg);
   transform-origin: center center;
 }
 
@@ -4336,7 +4345,7 @@ body.board-module-open .score-reset-confirm {
   top: 50%;
   left: calc(var(--frame-inset) * 0.12);
   right: auto;
-  transform: translateY(-50%) translateZ(10px);
+  transform: translateY(-50%) translateZ(calc(var(--board-depth) + 2px));
 }
 
 /* Keep view controls above the board overlay */
