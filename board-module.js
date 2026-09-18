@@ -1,7 +1,7 @@
 /**
  * Board module — physical-style scoring track with character card slots.
  * Opens as a full-viewport view (same control cluster as characters fullscreen).
- * Supports pan (drag), zoom (wheel / pinch), and 3-finger tilt on touch.
+ * Supports pan (drag), zoom (wheel / pinch), and 3-finger tilt + azimuth on touch.
  */
 const BoardModule = (() => {
   const TRACK_MAX = 30;
@@ -10,13 +10,15 @@ const BoardModule = (() => {
   const MIN_SCALE = 0.55;
   const MAX_SCALE = 5.5;
   const DEFAULT_TILT_X = 38;
-  const DEFAULT_TILT_Y = -10;
+  const DEFAULT_TILT_Y = -8;
+  const DEFAULT_AZIMUTH = 0;
   const MIN_TILT_X = -85;
   const MAX_TILT_X = 85;
-  const MIN_TILT_Y = -90;
-  const MAX_TILT_Y = 90;
+  const MIN_AZIMUTH = -180;
+  const MAX_AZIMUTH = 180;
   const PAN_CLICK_THRESHOLD = 6;
   const TILT_SENSITIVITY = 0.4;
+  const AZIMUTH_SENSITIVITY = 0.35;
   const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
@@ -60,12 +62,13 @@ const BoardModule = (() => {
   let panY = 0;
   let tiltX = DEFAULT_TILT_X;
   let tiltY = DEFAULT_TILT_Y;
+  let azimuth = DEFAULT_AZIMUTH;
 
   /** @type {{ pointerId: number, startX: number, startY: number, originPanX: number, originPanY: number, moved: boolean, card: Element|null, cube: Element|null } | null} */
   let drag = null;
   /** @type {{ distance: number, scale: number, idA: number, idB: number } | null} */
   let pinch = null;
-  /** @type {{ startX: number, startY: number, originTiltX: number, originTiltY: number } | null} */
+  /** @type {{ startX: number, startY: number, originTiltX: number, originAzimuth: number } | null} */
   let tiltGesture = null;
   let suppressCardClick = false;
 
@@ -96,8 +99,9 @@ const BoardModule = (() => {
 
   function applyTilt() {
     if (!assemblyEl) return;
-    // Same model as the reference demo: rotateX/rotateY on the 3D root.
-    assemblyEl.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+    // Azimuth spins the board; tiltX tips it toward/away from the camera.
+    assemblyEl.style.transform =
+      `rotateZ(${azimuth}deg) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
   }
 
   function applyTransform() {
@@ -111,6 +115,7 @@ const BoardModule = (() => {
     panY = 0;
     tiltX = DEFAULT_TILT_X;
     tiltY = DEFAULT_TILT_Y;
+    azimuth = DEFAULT_AZIMUTH;
     applyTransform();
   }
 
@@ -344,7 +349,8 @@ const BoardModule = (() => {
       return measureFn();
     } finally {
       assemblyEl.style.transform =
-        prevAssembly || `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+        prevAssembly ||
+        `rotateZ(${azimuth}deg) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
       if (sceneEl) sceneEl.style.perspective = prevPerspective;
     }
   }
@@ -642,7 +648,7 @@ const BoardModule = (() => {
     zoomAt(event.clientX, event.clientY, factor);
   }
 
-  /** Touch: 2-finger pinch zoom, 3-finger tilt (same model as the CSS 3D demo). */
+  /** Touch: 2-finger pinch zoom; 3-finger tilt (vertical) + azimuth (horizontal). */
   function onTouchStart(event) {
     if (!isActive()) return;
     if (event.touches.length === 3) {
@@ -654,7 +660,7 @@ const BoardModule = (() => {
         startX: midpoint.x,
         startY: midpoint.y,
         originTiltX: tiltX,
-        originTiltY: tiltY,
+        originAzimuth: azimuth,
       };
       root?.classList.add("board-module--panning");
       return;
@@ -684,11 +690,11 @@ const BoardModule = (() => {
       const midpoint = threeFingerMidpoint(event.touches);
       const dx = midpoint.x - tiltGesture.startX;
       const dy = midpoint.y - tiltGesture.startY;
-      // Match demo: horizontal → rotateY, vertical inverted → rotateX.
-      tiltY = clamp(
-        tiltGesture.originTiltY + dx * TILT_SENSITIVITY,
-        MIN_TILT_Y,
-        MAX_TILT_Y
+      // Horizontal → spin board (azimuth); vertical → tip toward/away.
+      azimuth = clamp(
+        tiltGesture.originAzimuth + dx * AZIMUTH_SENSITIVITY,
+        MIN_AZIMUTH,
+        MAX_AZIMUTH
       );
       tiltX = clamp(
         tiltGesture.originTiltX - dy * TILT_SENSITIVITY,
