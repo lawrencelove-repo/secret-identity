@@ -245,48 +245,65 @@ const BoardModule = (() => {
   }
 
   /**
-   * Eight fixed seats in each score cell (2 rows × 4 columns), skipping the
-   * dead-center so the printed number stays readable. Fractions of cell size.
+   * Eight corral seats: outer corners first, then nearer the number.
+   * All seats stay off-center so the printed score stays readable
+   * until the corral is full (max 8 — still no center seat).
+   * Values are fractions of cell width/height from the cell center.
    */
   const CELL_SLOT_FRACTIONS = [
-    [-0.30, -0.22],
-    [-0.30, 0.22],
-    [-0.16, -0.18],
-    [-0.16, 0.18],
-    [0.16, -0.18],
-    [0.16, 0.18],
-    [0.30, -0.22],
-    [0.30, 0.22],
+    // Outer band (filled first)
+    [-0.33, -0.27],
+    [0.33, -0.27],
+    [-0.33, 0.27],
+    [0.33, 0.27],
+    // Inner band (closer to number, filled after outers)
+    [-0.15, -0.27],
+    [0.15, -0.27],
+    [-0.15, 0.27],
+    [0.15, 0.27],
   ];
 
-  /** Seeded shuffle of slot indexes; first `count` are the occupied seats. */
-  function pickSlotIndexes(count, seed) {
-    const indexes = CELL_SLOT_FRACTIONS.map((_, i) => i);
-    for (let i = indexes.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(rand(`${seed}:slot:${i}`) * (i + 1));
-      const tmp = indexes[i];
-      indexes[i] = indexes[j];
-      indexes[j] = tmp;
+  function shuffleIndexes(indexes, seed) {
+    const list = indexes.slice();
+    for (let i = list.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rand(`${seed}:${i}`) * (i + 1));
+      const tmp = list[i];
+      list[i] = list[j];
+      list[j] = tmp;
     }
-    return indexes.slice(0, Math.min(count, MAX_CUBES_PER_CELL));
+    return list;
   }
 
   /**
-   * Assign each cube in a cell a unique random slot (stable for color+score set).
+   * Prefer outer seats, then inner. Shuffle only within each band so
+   * the number stays clear unless the corral is crowded.
    */
-  function layoutsForCell(colorIds, score, cellWidth, cellHeight) {
-    const seed = `v3:${score}:${colorIds.join(",")}`;
+  function pickSlotIndexes(count, seed) {
+    const outer = shuffleIndexes([0, 1, 2, 3], `${seed}:outer`);
+    const inner = shuffleIndexes([4, 5, 6, 7], `${seed}:inner`);
+    return outer.concat(inner).slice(0, Math.min(count, MAX_CUBES_PER_CELL));
+  }
+
+  /**
+   * Assign each cube in a cell a unique corral seat (stable for color+score set).
+   */
+  function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
+    const seed = `v4:${score}:${colorIds.join(",")}`;
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
+    // Keep jitter tiny so cubes stay inside fences and don't collide.
+    const jitterX = Math.min(cellWidth * 0.012, cubeSize * 0.12);
+    const jitterY = Math.min(cellHeight * 0.02, cubeSize * 0.12);
 
     colorIds.forEach((colorId, index) => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 3 &&
+        prior.version === 4 &&
         prior.score === score &&
         prior.cellKey === seed &&
-        prior.index === index
+        prior.index === index &&
+        prior.cubeSize === cubeSize
       ) {
         layouts[colorId] = prior;
         return;
@@ -295,13 +312,14 @@ const BoardModule = (() => {
       const slot = CELL_SLOT_FRACTIONS[slotIndexes[index]];
       const seedBase = `${seed}:${colorId}`;
       const layout = {
-        version: 3,
+        version: 4,
         score,
         cellKey: seed,
         index,
-        x: slot[0] * cellWidth + randRange(`${seedBase}:x`, -cellWidth * 0.02, cellWidth * 0.02),
-        y: slot[1] * cellHeight + randRange(`${seedBase}:y`, -cellHeight * 0.06, cellHeight * 0.06),
-        rot: randRange(`${seedBase}:r`, -12, 12),
+        cubeSize,
+        x: slot[0] * cellWidth + randRange(`${seedBase}:x`, -jitterX, jitterX),
+        y: slot[1] * cellHeight + randRange(`${seedBase}:y`, -jitterY, jitterY),
+        rot: randRange(`${seedBase}:r`, -6, 6),
       };
       cubeLayouts[colorId] = layout;
       layouts[colorId] = layout;
@@ -310,11 +328,20 @@ const BoardModule = (() => {
     return layouts;
   }
 
-  function cubeSizePx() {
-    const assembly = root?.querySelector(".board-module__assembly");
-    const size = assembly?.getBoundingClientRect().width / (scale || 1) || 400;
-    // True cube side length (H = W = L), sized relative to the board face.
-    return clamp(size * 0.042, 16, 30);
+  /**
+   * Cube side length from a corral's box so 8 cubes fit in a 2×4 seat grid
+   * with fence padding and a clear center lane for the score number.
+   */
+  function cubeSizeForCell(cellWidth, cellHeight) {
+    const padX = 0.08;
+    const padY = 0.10;
+    const centerGapX = 0.24;
+    const usableW = cellWidth * (1 - 2 * padX - centerGapX);
+    const usableH = cellHeight * (1 - 2 * padY);
+    // Two cubes per side of the number, two rows — leave ~15% gutters between seats.
+    const byW = (usableW / 2) * 0.82;
+    const byH = (usableH / 2) * 0.82;
+    return clamp(Math.min(byW, byH), 4, 11);
   }
 
   function refreshCubes() {
@@ -336,7 +363,6 @@ const BoardModule = (() => {
     });
 
     cubesEl.replaceChildren();
-    const size = cubeSizePx();
 
     Object.entries(byScore).forEach(([scoreStr, colors]) => {
       const score = Number(scoreStr);
@@ -350,7 +376,8 @@ const BoardModule = (() => {
       // Undo parent scale so layout uses unscaled cell metrics.
       const cellW = cellRect.width / scale;
       const cellH = cellRect.height / scale;
-      const layouts = layoutsForCell(colors, score, cellW, cellH);
+      const size = cubeSizeForCell(cellW, cellH);
+      const layouts = layoutsForCell(colors, score, cellW, cellH, size);
 
       colors.forEach((colorId) => {
         const layout = layouts[colorId];

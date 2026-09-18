@@ -4050,7 +4050,7 @@ body.board-module-open .score-reset-confirm {
 
 .board-cube {
   /* Equal H/W/L CSS cube; sits on the track (bottom face at local z = -half). */
-  --cube-size: 18px;
+  --cube-size: 8px;
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
