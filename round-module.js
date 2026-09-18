@@ -58,6 +58,8 @@ const RoundModule = (() => {
 
   let pendingAdvanceTo = null;
   let defaultColorOrder = [];
+  /** Set only by round-indicator clicks; enables Round 4 summary after game end. */
+  let summaryRoundFromClick = null;
 
   const indicatorEl = document.getElementById("round-indicator");
   const confirmEl = document.getElementById("round-confirm");
@@ -523,13 +525,24 @@ const RoundModule = (() => {
     scoreboardEl.hidden = true;
   }
 
+  /**
+   * Round summary for past rounds always; for Round 4 only after an explicit
+   * indicator click once the game is complete (not on the post-winner board open).
+   */
+  function shouldShowRoundSummary(roundNumber) {
+    if (roundNumber < currentRound) return true;
+    return (
+      isGameComplete() &&
+      roundNumber === TOTAL_ROUNDS &&
+      summaryRoundFromClick === TOTAL_ROUNDS
+    );
+  }
+
   function renderScoreboard(roundNumber) {
     if (!scoreboardEl) return;
 
     const round = getRound(roundNumber);
-    const reviewingPast = roundNumber < currentRound;
-
-    if (!reviewingPast || !round) {
+    if (!round || !shouldShowRoundSummary(roundNumber)) {
       scoreboardEl.hidden = true;
       scoreboardEl.replaceChildren();
       return;
@@ -616,7 +629,7 @@ const RoundModule = (() => {
 
     updateTabulatedIndicators(roundNumber);
 
-    if (roundNumber < currentRound) {
+    if (shouldShowRoundSummary(roundNumber)) {
       renderScoreboard(roundNumber);
       document.body.classList.add("round-reviewing");
     } else {
@@ -671,23 +684,39 @@ const RoundModule = (() => {
   }
 
   function requestRound(targetRound) {
-    if (targetRound === viewingRound && targetRound === currentRound) return;
+    const clickingFinalSummary =
+      isGameComplete() &&
+      targetRound === TOTAL_ROUNDS &&
+      viewingRound === TOTAL_ROUNDS &&
+      currentRound === TOTAL_ROUNDS;
+
+    if (
+      targetRound === viewingRound &&
+      targetRound === currentRound &&
+      !clickingFinalSummary
+    ) {
+      return;
+    }
 
     // Past round — review characters + scores.
     if (targetRound < currentRound) {
       if (CharacterModule.isOpen()) CharacterModule.close();
+      summaryRoundFromClick = targetRound;
       displayRound(targetRound);
       return;
     }
 
-    // Current round — leave review mode if needed.
+    // Current round — leave review mode if needed (or show final-round summary).
     if (targetRound === currentRound) {
       if (CharacterModule.isOpen()) CharacterModule.close();
+      summaryRoundFromClick =
+        isGameComplete() && targetRound === TOTAL_ROUNDS ? TOTAL_ROUNDS : null;
       displayRound(currentRound);
       return;
     }
 
     // Future round — confirm if the active round still needs scores.
+    summaryRoundFromClick = null;
     if (isRoundIncomplete(currentRound)) {
       openConfirm(targetRound);
       return;
@@ -848,6 +877,10 @@ const RoundModule = (() => {
   function notifyGameCompleteIfNeeded() {
     if (!isGameComplete() || winnerAnnounced) return false;
     winnerAnnounced = true;
+    // Board opens on Round 4 without a summary until the indicator is clicked.
+    summaryRoundFromClick = null;
+    hideScoreboard();
+    document.body.classList.remove("round-reviewing");
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
@@ -885,6 +918,7 @@ const RoundModule = (() => {
     gameStarted = true;
     pendingAdvanceTo = null;
     winnerAnnounced = false;
+    summaryRoundFromClick = null;
     if (typeof WinnerModule !== "undefined") WinnerModule.close();
     if (typeof BoardModule !== "undefined") {
       BoardModule.clearCubeIdentity();

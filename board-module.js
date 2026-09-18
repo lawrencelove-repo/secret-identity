@@ -481,7 +481,32 @@ const BoardModule = (() => {
     fxCanvas.classList.remove("is-active");
   }
 
+  /** Fireworks only on the final round while celebrating a finished game. */
+  function fireworksAllowed() {
+    return Boolean(
+      celebrationActive &&
+        typeof RoundModule !== "undefined" &&
+        RoundModule.viewingRound === RoundModule.TOTAL_ROUNDS
+    );
+  }
+
+  function syncFireworksForViewingRound() {
+    if (!celebrationActive) return;
+    if (fireworksAllowed()) {
+      fxCanvas?.classList.add("is-active");
+      // Burst on the next celebration frame when returning to round 4.
+      celebrationBurstAcc = CELEBRATION_BURST_MS;
+      return;
+    }
+    fxParticles = [];
+    if (!fxCanvas) return;
+    const ctx = fxCanvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    fxCanvas.classList.remove("is-active");
+  }
+
   function burstFireworksFromColor(colorId) {
+    if (!fireworksAllowed()) return;
     const cube = cubesEl?.querySelector(`.board-cube--${colorId}`);
     if (!cube) return;
     const rect = cube.getBoundingClientRect();
@@ -507,9 +532,17 @@ const BoardModule = (() => {
 
   function updateFireworks(dt) {
     if (!fxCanvas || !celebrationActive) return;
+    if (!fireworksAllowed()) {
+      if (fxParticles.length || fxCanvas.classList.contains("is-active")) {
+        syncFireworksForViewingRound();
+      }
+      return;
+    }
+
     const ctx = fxCanvas.getContext("2d");
     if (!ctx) return;
 
+    fxCanvas.classList.add("is-active");
     celebrationBurstAcc += dt * 1000;
     if (celebrationBurstAcc >= CELEBRATION_BURST_MS) {
       celebrationBurstAcc = 0;
@@ -577,9 +610,11 @@ const BoardModule = (() => {
     applyTilt();
 
     resizeFxCanvas();
-    fxCanvas?.classList.add("is-active");
+    fxCanvas?.classList.toggle("is-active", fireworksAllowed());
     fxParticles = [];
-    celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+    if (fireworksAllowed()) {
+      celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+    }
     syncCubeTabulatedStates();
 
     if (celebrationRaf) cancelAnimationFrame(celebrationRaf);
@@ -959,6 +994,7 @@ const BoardModule = (() => {
     ensureTrack();
     refreshCards();
     refreshCubes();
+    syncFireworksForViewingRound();
   }
 
   function openCharacterFromCard(card) {
