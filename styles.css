@@ -3955,6 +3955,9 @@ body.board-module-open .score-reset-confirm {
   overflow: visible;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
+  /* TEMP debug: show each scoring-zone corral boundary */
+  outline: 2px solid #ffe600;
+  outline-offset: -2px;
   background:
     linear-gradient(
       180deg,
@@ -4041,23 +4044,20 @@ body.board-module-open .score-reset-confirm {
 }
 
 .board-cubes {
-  /* Match the track interior; assembly sibling so cubes sit above the frame top. */
-  --frame-span: calc(100% - 2 * var(--frame-inset));
-  --wrap-inset: calc(var(--frame-span) * 0.07);
-  --track-inset: calc((var(--frame-span) - 2 * var(--wrap-inset)) * 0.025);
+  /* Same box as .board-track so cell offsets map 1:1 into this layer. */
   position: absolute;
-  inset: calc(var(--frame-inset) + var(--wrap-inset) + var(--track-inset));
+  inset: 2.5%;
   pointer-events: none;
-  z-index: 4;
+  z-index: 5;
   overflow: visible;
-  transform: translateZ(1px);
+  transform: translateZ(2px);
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
 }
 
 .board-cube {
-  /* Equal H/W/L CSS cube; sits on the track (bottom face at local z = -half). */
-  --cube-size: 8px;
+  /* Equal H/W/L CSS cube; bottom face rests on the track top. */
+  --cube-size: 12px;
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);

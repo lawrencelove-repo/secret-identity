@@ -245,33 +245,25 @@ const BoardModule = (() => {
   }
 
   /**
-   * Eight corral seats in px offsets from cell center.
-   * Outer band first, then inner. Y is kept tight and slightly low so
-   * cube height under board tilt doesn't project into the next zone up.
+   * Eight seats (2 rows × 4 cols) as px offsets from the zone center.
+   * Leaves a center lane for the score number; keeps cubes inside fences.
    */
   function seatsForCell(cellWidth, cellHeight, cubeSize) {
-    const rotPad = cubeSize * 0.12;
-    const half = cubeSize / 2 + rotPad;
-    const fenceX = Math.max(cubeSize * 0.25, cellWidth * 0.05);
-    const fenceY = Math.max(cubeSize * 0.35, cellHeight * 0.14);
+    const half = cubeSize / 2 + cubeSize * 0.1;
+    const fenceX = Math.max(cubeSize * 0.18, cellWidth * 0.04);
+    const fenceY = Math.max(cubeSize * 0.18, cellHeight * 0.1);
     const maxX = Math.max(0, cellWidth / 2 - fenceX - half);
     const maxY = Math.max(0, cellHeight / 2 - fenceY - half);
-    const outerX = maxX;
-    const innerX = maxX * 0.45;
-    // Keep both rows near the middle; bias downward (positive Y) away from the
-    // higher-scoring neighbor so elevated cube tops don't read as the next zone.
-    const yUp = -maxY * 0.35;
-    const yDown = maxY * 0.75;
-    return [
-      [-outerX, yUp],
-      [outerX, yUp],
-      [-outerX, yDown],
-      [outerX, yDown],
-      [-innerX, yUp],
-      [innerX, yUp],
-      [-innerX, yDown],
-      [innerX, yDown],
-    ];
+    const xs = [-maxX, -maxX * 0.38, maxX * 0.38, maxX];
+    const ys = [-maxY, maxY];
+    /** @type {Array<[number, number]>} */
+    const seats = [];
+    ys.forEach((y) => {
+      xs.forEach((x) => {
+        seats.push([x, y]);
+      });
+    });
+    return seats;
   }
 
   function shuffleIndexes(indexes, seed) {
@@ -285,32 +277,27 @@ const BoardModule = (() => {
     return list;
   }
 
-  /**
-   * Prefer outer seats, then inner. Shuffle only within each band so
-   * the number stays clear unless the corral is crowded.
-   */
+  /** Fill the 8 seats in random order as cubes are needed. */
   function pickSlotIndexes(count, seed) {
-    const outer = shuffleIndexes([0, 1, 2, 3], `${seed}:outer`);
-    const inner = shuffleIndexes([4, 5, 6, 7], `${seed}:inner`);
-    return outer.concat(inner).slice(0, Math.min(count, MAX_CUBES_PER_CELL));
+    return shuffleIndexes(
+      [0, 1, 2, 3, 4, 5, 6, 7],
+      `${seed}:seats`
+    ).slice(0, Math.min(count, MAX_CUBES_PER_CELL));
   }
 
-  /**
-   * Assign each cube in a cell a unique corral seat (stable for color+score set).
-   */
   function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v6:${score}:${colorIds.join(",")}`;
+    const seed = `v7:${score}:${colorIds.join(",")}`;
     const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
     const slotIndexes = pickSlotIndexes(colorIds.length, seed);
     const layouts = {};
-    const jitterX = Math.min(cellWidth * 0.008, cubeSize * 0.08);
-    const jitterY = Math.min(cellHeight * 0.01, cubeSize * 0.06);
+    const jitterX = Math.min(cellWidth * 0.01, cubeSize * 0.1);
+    const jitterY = Math.min(cellHeight * 0.015, cubeSize * 0.1);
 
     colorIds.forEach((colorId, index) => {
       const prior = cubeLayouts[colorId];
       if (
         prior &&
-        prior.version === 6 &&
+        prior.version === 7 &&
         prior.score === score &&
         prior.cellKey === seed &&
         prior.index === index &&
@@ -323,7 +310,7 @@ const BoardModule = (() => {
       const seat = seats[slotIndexes[index]];
       const seedBase = `${seed}:${colorId}`;
       const layout = {
-        version: 6,
+        version: 7,
         score,
         cellKey: seed,
         index,
@@ -339,15 +326,52 @@ const BoardModule = (() => {
     return layouts;
   }
 
-  /**
-   * Cube side length from a corral's box so 8 cubes fit in a 2×4 seat grid
-   * with fence padding, yaw margin, and a clear center lane for the score.
-   */
   function cubeSizeForCell(cellWidth, cellHeight) {
-    // Two compact rows inside the cell after fences + yaw + 3D height margin.
-    const byH = cellHeight * 0.22;
-    const byW = cellWidth * 0.12;
-    return clamp(Math.min(byW, byH), 3.5, 8);
+    const byH = cellHeight * 0.3;
+    const byW = cellWidth * 0.14;
+    return clamp(Math.min(byW, byH), 5, 12);
+  }
+
+  /**
+   * Measure zone geometry in the cubes layer without board tilt/perspective
+   * distorting getBoundingClientRect. Sync — browser won't paint mid-call.
+   */
+  function withFlatBoard(measureFn) {
+    if (!assemblyEl) return measureFn();
+    const sceneEl = root?.querySelector(".board-module__scene");
+    const prevAssembly = assemblyEl.style.transform;
+    const prevPerspective = sceneEl ? sceneEl.style.perspective : "";
+    assemblyEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+    if (sceneEl) sceneEl.style.perspective = "none";
+    void assemblyEl.offsetWidth;
+    try {
+      return measureFn();
+    } finally {
+      assemblyEl.style.transform =
+        prevAssembly || `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+      if (sceneEl) sceneEl.style.perspective = prevPerspective;
+    }
+  }
+
+  /**
+   * Zone box in cubesEl local pixels (cubes layer shares the track inset box).
+   */
+  function measureZoneInCubesLayer(cell) {
+    return withFlatBoard(() => {
+      const cellRect = cell.getBoundingClientRect();
+      const layerRect = cubesEl.getBoundingClientRect();
+      if (!layerRect.width || !layerRect.height) {
+        return { cx: 0, cy: 0, width: 0, height: 0 };
+      }
+      const sx = cubesEl.clientWidth / layerRect.width;
+      const sy = cubesEl.clientHeight / layerRect.height;
+      return {
+        cx: (cellRect.left + cellRect.width / 2 - layerRect.left) * sx,
+        cy: (cellRect.top + cellRect.height / 2 - layerRect.top) * sy,
+        width: cellRect.width * sx,
+        height: cellRect.height * sy,
+      };
+    });
   }
 
   function clearBoardCubes() {
@@ -356,7 +380,7 @@ const BoardModule = (() => {
   }
 
   function refreshCubes() {
-    if (!trackEl || typeof RoundModule === "undefined") return;
+    if (!cubesEl || !trackEl || typeof RoundModule === "undefined") return;
     ensureTrack();
 
     const active = RoundModule.gameStarted ? RoundModule.activeColors() : [];
@@ -380,12 +404,11 @@ const BoardModule = (() => {
       const cell = trackEl.querySelector(`.board-track__cell[data-score="${score}"]`);
       if (!cell) return;
 
-      const cellW = cell.clientWidth;
-      const cellH = cell.clientHeight;
-      if (!cellW || !cellH) return;
+      const zone = measureZoneInCubesLayer(cell);
+      if (!zone.width || !zone.height) return;
 
-      const size = cubeSizeForCell(cellW, cellH);
-      const layouts = layoutsForCell(colors, score, cellW, cellH, size);
+      const size = cubeSizeForCell(zone.width, zone.height);
+      const layouts = layoutsForCell(colors, score, zone.width, zone.height, size);
 
       colors.forEach((colorId) => {
         const layout = layouts[colorId];
@@ -400,9 +423,8 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        // Position inside this corral cell — avoids track/cubes-layer coordinate drift.
-        cube.style.left = "50%";
-        cube.style.top = "50%";
+        cube.style.left = `${zone.cx}px`;
+        cube.style.top = `${zone.cy}px`;
         cube.style.transform =
           `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
           `rotateZ(${layout.rot}deg)`;
@@ -414,7 +436,7 @@ const BoardModule = (() => {
           cube.appendChild(faceEl);
         });
 
-        cell.appendChild(cube);
+        cubesEl.appendChild(cube);
       });
     });
   }
