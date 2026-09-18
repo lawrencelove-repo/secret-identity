@@ -580,6 +580,7 @@ const BoardModule = (() => {
     fxCanvas?.classList.add("is-active");
     fxParticles = [];
     celebrationColors.forEach((colorId) => burstFireworksFromColor(colorId));
+    syncCubeTabulatedStates();
 
     if (celebrationRaf) cancelAnimationFrame(celebrationRaf);
     celebrationRaf = requestAnimationFrame(celebrationFrame);
@@ -685,6 +686,14 @@ const BoardModule = (() => {
     }. Open score.`;
   }
 
+  function shouldShowCubeTabulated(colorId) {
+    if (typeof RoundModule === "undefined") return false;
+    // No scored outline during past-round replay or after the game is finished.
+    if (isReviewingPastRound()) return false;
+    if (RoundModule.isGameComplete()) return false;
+    return RoundModule.isPlayerTabulated(RoundModule.viewingRound, colorId);
+  }
+
   function buildCubeElement(colorId, score, size, zone, layout) {
     const cube = document.createElement("div");
     cube.className = `board-cube board-cube--${colorId}`;
@@ -694,9 +703,7 @@ const BoardModule = (() => {
     cube.setAttribute("role", "button");
     cube.tabIndex = 0;
     cube.title = formatCubeTitle(colorId, score);
-    const tabulated =
-      !isReviewingPastRound() &&
-      RoundModule.isPlayerTabulated(RoundModule.viewingRound, colorId);
+    const tabulated = shouldShowCubeTabulated(colorId);
     cube.classList.toggle("is-tabulated", tabulated);
     cube.setAttribute("aria-label", formatCubeAria(colorId, score, tabulated));
     cube.style.setProperty("--cube-size", `${size}px`);
@@ -724,17 +731,13 @@ const BoardModule = (() => {
     return cube;
   }
 
-  /** Sync white glow with which colors are tabulated for the current round. */
+  /** Sync white outline with which colors are tabulated for the current round. */
   function syncCubeTabulatedStates() {
     if (!cubesEl || typeof RoundModule === "undefined") return;
-    const reviewing = isReviewingPastRound();
-    const round = RoundModule.viewingRound;
     cubesEl.querySelectorAll(".board-cube").forEach((cube) => {
       const colorId = cube.dataset.color;
       if (!colorId) return;
-      const tabulated =
-        !reviewing && RoundModule.isPlayerTabulated(round, colorId);
-      cube.classList.toggle("is-tabulated", tabulated);
+      cube.classList.toggle("is-tabulated", shouldShowCubeTabulated(colorId));
     });
   }
 
@@ -853,8 +856,7 @@ const BoardModule = (() => {
           formatCubeAria(
             state.color,
             state.current,
-            !isReviewingPastRound() &&
-              RoundModule.isPlayerTabulated(RoundModule.viewingRound, state.color)
+            shouldShowCubeTabulated(state.color)
           )
         );
         // Same seat number in every zone along the path.
