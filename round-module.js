@@ -613,6 +613,8 @@ const RoundModule = (() => {
 
     if (typeof BoardModule !== "undefined" && BoardModule.isActive()) {
       BoardModule.refresh();
+    } else if (typeof BoardModule !== "undefined") {
+      BoardModule.markScoresChanged();
     }
   }
 
@@ -868,6 +870,9 @@ const RoundModule = (() => {
     pendingAdvanceTo = null;
     winnerAnnounced = false;
     if (typeof WinnerModule !== "undefined") WinnerModule.close();
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.clearCubeIdentity();
+    }
     restoreColorOrder();
     updateActivePlayerVisibility();
     dealRound(1);

@@ -4069,6 +4069,50 @@ body.board-module-open .score-reset-confirm {
   -webkit-transform-style: preserve-3d;
 }
 
+.board-cube--moving {
+  transition:
+    left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+}
+
+.board-cube__hop {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.board-cube__hop.is-hopping {
+  animation: board-cube-hop 0.4s ease-in-out;
+}
+
+.board-cube__solid {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+@keyframes board-cube-hop {
+  0% {
+    transform: translateZ(0) scaleY(1);
+  }
+  15% {
+    transform: translateZ(0) scaleY(0.82);
+  }
+  50% {
+    transform: translateZ(calc(var(--cube-size) * 1.35)) scaleY(1.08);
+  }
+  85% {
+    transform: translateZ(0) scaleY(0.9);
+  }
+  100% {
+    transform: translateZ(0) scaleY(1);
+  }
+}
+
 .board-cube__face {
   position: absolute;
   width: var(--cube-size);

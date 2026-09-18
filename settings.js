@@ -6,6 +6,7 @@ const AppSettings = (() => {
     specifyCharacter: "si_specify_character",
     allowRandom: "si_allow_random",
     textScale: "si_text_scale",
+    animateCubeMoves: "si_animate_cube_moves",
   };
 
   /** Five ticks: 80% … 100% (default) … 120% */
@@ -16,6 +17,7 @@ const AppSettings = (() => {
     specifyCharacter: false,
     allowRandom: false,
     textScaleIndex: DEFAULT_TEXT_SCALE_INDEX,
+    animateCubeMoves: true,
   };
 
   function readCookie(name) {
@@ -74,6 +76,19 @@ const AppSettings = (() => {
     document.dispatchEvent(
       new CustomEvent("secret-identity:settings-change", {
         detail: { key: "allowRandom", value: Boolean(value) },
+      })
+    );
+  }
+
+  function getAnimateCubeMoves() {
+    return getBool(KEYS.animateCubeMoves, DEFAULTS.animateCubeMoves);
+  }
+
+  function setAnimateCubeMoves(value) {
+    setBool(KEYS.animateCubeMoves, Boolean(value));
+    document.dispatchEvent(
+      new CustomEvent("secret-identity:settings-change", {
+        detail: { key: "animateCubeMoves", value: Boolean(value) },
       })
     );
   }
@@ -152,6 +167,8 @@ const AppSettings = (() => {
     setSpecifyCharacter,
     getAllowRandom,
     setAllowRandom,
+    getAnimateCubeMoves,
+    setAnimateCubeMoves,
     getTextScaleIndex,
     getTextScale,
     setTextScaleIndex,

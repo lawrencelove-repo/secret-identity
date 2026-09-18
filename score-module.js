@@ -197,8 +197,9 @@ const ScoreModule = (() => {
       draftScore,
       [...draftMarks]
     );
-    RoundModule.refreshView();
+    // Close first so board cube hops start after the modal is gone.
     close();
+    RoundModule.refreshView();
     RoundModule.notifyGameCompleteIfNeeded();
   }
 

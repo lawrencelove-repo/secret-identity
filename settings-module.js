@@ -24,6 +24,7 @@ const SettingsModule = (() => {
   function syncInputs() {
     const specifyInput = root?.querySelector("[data-setting-specify-character]");
     const randomInput = root?.querySelector("[data-setting-allow-random]");
+    const animateCubesInput = root?.querySelector("[data-setting-animate-cubes]");
     const textScaleInput = root?.querySelector("[data-setting-text-scale]");
     const textScaleValue = root?.querySelector("[data-setting-text-scale-value]");
 
@@ -32,6 +33,9 @@ const SettingsModule = (() => {
     }
     if (randomInput && typeof AppSettings !== "undefined") {
       randomInput.checked = AppSettings.getAllowRandom();
+    }
+    if (animateCubesInput && typeof AppSettings !== "undefined") {
+      animateCubesInput.checked = AppSettings.getAnimateCubeMoves();
     }
     if (textScaleInput && typeof AppSettings !== "undefined") {
       const index = AppSettings.getTextScaleIndex();
@@ -66,6 +70,7 @@ const SettingsModule = (() => {
   function bindInputs() {
     const specifyInput = root?.querySelector("[data-setting-specify-character]");
     const randomInput = root?.querySelector("[data-setting-allow-random]");
+    const animateCubesInput = root?.querySelector("[data-setting-animate-cubes]");
     const textScaleInput = root?.querySelector("[data-setting-text-scale]");
     const textScaleValue = root?.querySelector("[data-setting-text-scale-value]");
 
@@ -78,6 +83,12 @@ const SettingsModule = (() => {
     randomInput?.addEventListener("change", () => {
       if (typeof AppSettings !== "undefined") {
         AppSettings.setAllowRandom(randomInput.checked);
+      }
+    });
+
+    animateCubesInput?.addEventListener("change", () => {
+      if (typeof AppSettings !== "undefined") {
+        AppSettings.setAnimateCubeMoves(animateCubesInput.checked);
       }
     });
 

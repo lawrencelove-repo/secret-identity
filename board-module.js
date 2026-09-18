@@ -19,6 +19,7 @@ const BoardModule = (() => {
   const PAN_CLICK_THRESHOLD = 6;
   const TILT_SENSITIVITY = 0.4;
   const AZIMUTH_SENSITIVITY = 0.35;
+  const HOP_MS = 450;
   const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
@@ -53,9 +54,6 @@ const BoardModule = (() => {
   const cubesEl = document.getElementById("board-cubes");
   const toggle = document.getElementById("board-module-toggle");
 
-  /** @type {Record<string, { score: number, index: number, cellCount: number, x: number, y: number, rot: number }>} */
-  const cubeLayouts = {};
-
   let built = false;
   let scale = 1;
   let panX = 0;
@@ -70,7 +68,17 @@ const BoardModule = (() => {
   let pinch = null;
   /** @type {{ startX: number, startY: number, originTiltX: number, originAzimuth: number } | null} */
   let tiltGesture = null;
-  let suppressCardClick = false;
+  /** @type {Record<string, number>} colorId → last rendered cumulative score */
+  const cubeScoreByColor = {};
+  /** @type {Record<string, number>} colorId → permanent seat index 0–7 */
+  const cubeSeatByColor = {};
+  /** @type {Record<string, number>} colorId → permanent azimuth degrees */
+  const cubeAzimuthByColor = {};
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let hopTimer = null;
+  let hopGeneration = 0;
+  /** True when Round scores changed while the board was closed. */
+  let scoresDirty = false;
 
   function isActive() {
     return document.body.classList.contains("board-module-open");
@@ -252,6 +260,7 @@ const BoardModule = (() => {
   /**
    * Eight seats in a single file across the zone (px from center).
    * Leaves a small center gap so the score number stays readable.
+   * Seat indexes 0–7 are stable for a cube's whole game.
    */
   function seatsForCell(cellWidth, cellHeight, cubeSize) {
     const half = cubeSize / 2 + cubeSize * 0.08;
@@ -274,54 +283,66 @@ const BoardModule = (() => {
     return list;
   }
 
-  /** Fill the 8 seats in random order as cubes are needed. */
-  function pickSlotIndexes(count, seed) {
-    return shuffleIndexes(
-      [0, 1, 2, 3, 4, 5, 6, 7],
-      `${seed}:seats`
-    ).slice(0, Math.min(count, MAX_CUBES_PER_CELL));
+  function clearCubeIdentity() {
+    Object.keys(cubeScoreByColor).forEach((key) => {
+      delete cubeScoreByColor[key];
+    });
+    Object.keys(cubeSeatByColor).forEach((key) => {
+      delete cubeSeatByColor[key];
+    });
+    Object.keys(cubeAzimuthByColor).forEach((key) => {
+      delete cubeAzimuthByColor[key];
+    });
+    scoresDirty = false;
   }
 
-  function layoutsForCell(colorIds, score, cellWidth, cellHeight, cubeSize) {
-    const seed = `v9:${score}:${colorIds.join(",")}`;
+  /** Call when Round scores/view change while the board is closed. */
+  function markScoresChanged() {
+    if (!isActive()) scoresDirty = true;
+  }
+
+  /** Drop seats for colors no longer on the board (full roster only). */
+  function pruneInactiveSeats(activeColorIds) {
+    const active = new Set(activeColorIds);
+    Object.keys(cubeSeatByColor).forEach((colorId) => {
+      if (!active.has(colorId)) {
+        delete cubeSeatByColor[colorId];
+        delete cubeAzimuthByColor[colorId];
+      }
+    });
+  }
+
+  /**
+   * Assign each color a permanent seat (0–7) the first time it appears.
+   * Seats stay fixed as the cube hops zone to zone — never reassigned mid-game.
+   */
+  function ensurePermanentSeats(colorIds) {
+    const needed = colorIds.filter((colorId) => cubeSeatByColor[colorId] === undefined);
+    if (!needed.length) return;
+
+    const used = new Set(Object.values(cubeSeatByColor));
+    const free = [0, 1, 2, 3, 4, 5, 6, 7].filter((seat) => !used.has(seat));
+    const order = shuffleIndexes(free, `seats:${needed.slice().sort().join(",")}`);
+    needed.forEach((colorId, index) => {
+      cubeSeatByColor[colorId] = order[index] ?? index % MAX_CUBES_PER_CELL;
+      cubeAzimuthByColor[colorId] = randRange(`${colorId}:az`, -10, 10);
+    });
+  }
+
+  function layoutForColor(colorId, cellWidth, cellHeight, cubeSize) {
+    const seatIndex = cubeSeatByColor[colorId] ?? 0;
     const seats = seatsForCell(cellWidth, cellHeight, cubeSize);
-    const slotIndexes = pickSlotIndexes(colorIds.length, seed);
-    const layouts = {};
+    const seat = seats[seatIndex] || [0, 0];
+    const seedBase = `seat:${colorId}:${seatIndex}`;
     const jitterX = Math.min(cellWidth * 0.008, cubeSize * 0.08);
     const jitterY = Math.min(cellHeight * 0.04, cubeSize * 0.12);
-
-    colorIds.forEach((colorId, index) => {
-      const prior = cubeLayouts[colorId];
-      if (
-        prior &&
-        prior.version === 9 &&
-        prior.score === score &&
-        prior.cellKey === seed &&
-        prior.index === index &&
-        prior.cubeSize === cubeSize
-      ) {
-        layouts[colorId] = prior;
-        return;
-      }
-
-      const seat = seats[slotIndexes[index]];
-      const seedBase = `${seed}:${colorId}`;
-      const layout = {
-        version: 8,
-        score,
-        cellKey: seed,
-        index,
-        cubeSize,
-        x: seat[0] + randRange(`${seedBase}:x`, -jitterX, jitterX),
-        y: seat[1] + randRange(`${seedBase}:y`, -jitterY, jitterY),
-        // Azimuth: spin about the board normal (vertical). No tip — stays upright.
-        azimuth: randRange(`${seedBase}:az`, -10, 10),
-      };
-      cubeLayouts[colorId] = layout;
-      layouts[colorId] = layout;
-    });
-
-    return layouts;
+    return {
+      seatIndex,
+      x: seat[0] + randRange(`${seedBase}:x`, -jitterX, jitterX),
+      y: seat[1] + randRange(`${seedBase}:y`, -jitterY, jitterY),
+      azimuth: cubeAzimuthByColor[colorId] ?? 0,
+      cubeSize,
+    };
   }
 
   /** Largest cube that still fits 8 in a single file across the zone. */
@@ -381,8 +402,197 @@ const BoardModule = (() => {
     cubesEl?.replaceChildren();
   }
 
-  function refreshCubes() {
+  function stopHopAnimation() {
+    if (hopTimer) {
+      clearInterval(hopTimer);
+      hopTimer = null;
+    }
+    hopGeneration += 1;
+    cubesEl?.querySelectorAll(".board-cube__hop.is-hopping").forEach((el) => {
+      el.classList.remove("is-hopping");
+    });
+    cubesEl?.querySelectorAll(".board-cube").forEach((cube) => {
+      cube.classList.remove("board-cube--moving");
+    });
+  }
+
+  function cubeHopEnabled() {
+    return typeof AppSettings !== "undefined" && AppSettings.getAnimateCubeMoves();
+  }
+
+  function buildCubeElement(colorId, score, size, zone, layout) {
+    const cube = document.createElement("div");
+    cube.className = `board-cube board-cube--${colorId}`;
+    cube.dataset.color = colorId;
+    cube.dataset.score = String(score);
+    cube.dataset.seat = String((layout.seatIndex ?? 0) + 1);
+    cube.setAttribute("role", "button");
+    cube.tabIndex = 0;
+    cube.title = `${RoundModule.getPlayerName(colorId)}: ${score}`;
+    cube.setAttribute(
+      "aria-label",
+      `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
+    );
+    cube.style.setProperty("--cube-size", `${size}px`);
+    cube.style.left = `${zone.cx + layout.x}px`;
+    cube.style.top = `${zone.cy + layout.y}px`;
+
+    const hop = document.createElement("div");
+    hop.className = "board-cube__hop";
+    hop.setAttribute("aria-hidden", "true");
+
+    const solid = document.createElement("div");
+    solid.className = "board-cube__solid";
+    solid.style.transform =
+      `translateZ(${size / 2}px) rotateZ(${layout.azimuth}deg)`;
+
+    CUBE_FACES.forEach((face) => {
+      const faceEl = document.createElement("div");
+      faceEl.className = `board-cube__face board-cube__face--${face}`;
+      faceEl.setAttribute("aria-hidden", "true");
+      solid.appendChild(faceEl);
+    });
+
+    hop.appendChild(solid);
+    cube.appendChild(hop);
+    return cube;
+  }
+
+  function triggerHop(cube) {
+    const hop = cube.querySelector(".board-cube__hop");
+    if (!hop) return;
+    hop.classList.remove("is-hopping");
+    void hop.offsetWidth;
+    hop.classList.add("is-hopping");
+  }
+
+  function measureAllZones() {
+    /** @type {Record<number, { cx: number, cy: number, width: number, height: number }>} */
+    const zones = {};
+    for (let score = 0; score <= TRACK_MAX; score += 1) {
+      const cell = trackEl?.querySelector(`.board-track__cell[data-score="${score}"]`);
+      if (!cell) continue;
+      const zone = measureZoneInCubesLayer(cell);
+      if (zone.width && zone.height) zones[score] = zone;
+    }
+    return zones;
+  }
+
+  function rebuildCubesInstant(byScore) {
+    clearBoardCubes();
+    Object.keys(cubeScoreByColor).forEach((key) => {
+      delete cubeScoreByColor[key];
+    });
+
+    const allColors = Object.values(byScore).flat();
+    pruneInactiveSeats(allColors);
+    ensurePermanentSeats(allColors);
+
+    Object.entries(byScore).forEach(([scoreStr, colors]) => {
+      const score = Number(scoreStr);
+      const cell = trackEl?.querySelector(`.board-track__cell[data-score="${score}"]`);
+      if (!cell) return;
+
+      const zone = measureZoneInCubesLayer(cell);
+      if (!zone.width || !zone.height) return;
+
+      const size = cubeSizeForCell(zone.width, zone.height);
+
+      colors.forEach((colorId) => {
+        const layout = layoutForColor(colorId, zone.width, zone.height, size);
+        const cube = buildCubeElement(colorId, score, size, zone, layout);
+        cubesEl.appendChild(cube);
+        cubeScoreByColor[colorId] = score;
+      });
+    });
+  }
+
+  /**
+   * Hop each moved cube zone-by-zone along its permanent seat, then settle.
+   */
+  function startHopAnimation(movers, finalByScore) {
+    stopHopAnimation();
+    const zones = measureAllZones();
+    if (!Object.keys(zones).length) {
+      rebuildCubesInstant(finalByScore);
+      return;
+    }
+
+    ensurePermanentSeats(movers.map((mover) => mover.color));
+
+    // Keep existing DOM cubes; ensure each mover exists.
+    movers.forEach((mover) => {
+      let cube = cubesEl?.querySelector(`.board-cube--${mover.color}`);
+      const startZone = zones[mover.from] || zones[0];
+      if (!startZone) return;
+      const size = cubeSizeForCell(startZone.width, startZone.height);
+      const layout = layoutForColor(mover.color, startZone.width, startZone.height, size);
+      if (!cube) {
+        cube = buildCubeElement(mover.color, mover.from, size, startZone, layout);
+        cubesEl.appendChild(cube);
+      } else {
+        cube.dataset.seat = String(layout.seatIndex + 1);
+        cube.style.setProperty("--cube-size", `${size}px`);
+        cube.style.left = `${startZone.cx + layout.x}px`;
+        cube.style.top = `${startZone.cy + layout.y}px`;
+      }
+      cube.classList.add("board-cube--moving");
+      cube.dataset.score = String(mover.from);
+    });
+
+    const gen = hopGeneration;
+    const states = movers.map((mover) => ({
+      color: mover.color,
+      current: mover.from,
+      target: mover.to,
+      seatIndex: cubeSeatByColor[mover.color] ?? 0,
+      el: cubesEl?.querySelector(`.board-cube--${mover.color}`) || null,
+    }));
+
+    const stepMovers = () => {
+      if (gen !== hopGeneration) return false;
+
+      let anyMoving = false;
+      states.forEach((state) => {
+        if (!state.el || state.current === state.target) return;
+        anyMoving = true;
+        state.current += state.current < state.target ? 1 : -1;
+        const zone = zones[state.current];
+        if (!zone) return;
+
+        const size = cubeSizeForCell(zone.width, zone.height);
+        const layout = layoutForColor(state.color, zone.width, zone.height, size);
+        state.el.style.setProperty("--cube-size", `${size}px`);
+        state.el.dataset.score = String(state.current);
+        state.el.dataset.seat = String(layout.seatIndex + 1);
+        state.el.title = `${RoundModule.getPlayerName(state.color)}: ${state.current}`;
+        // Same seat number in every zone along the path.
+        state.el.style.left = `${zone.cx + layout.x}px`;
+        state.el.style.top = `${zone.cy + layout.y}px`;
+        triggerHop(state.el);
+        cubeScoreByColor[state.color] = state.current;
+      });
+
+      if (!anyMoving) {
+        stopHopAnimation();
+        rebuildCubesInstant(finalByScore);
+        return false;
+      }
+      return true;
+    };
+
+    // First hop immediately, then continue on the interval cadence.
+    if (stepMovers()) {
+      hopTimer = setInterval(() => {
+        if (!stepMovers()) return;
+      }, HOP_MS);
+    }
+  }
+
+  function refreshCubes(options = {}) {
     if (!cubesEl || !trackEl || typeof RoundModule === "undefined") return;
+    // Let an in-flight hop finish; it rebuilds seats at the end.
+    if (hopTimer) return;
     ensureTrack();
 
     const active = RoundModule.gameStarted ? RoundModule.activeColors() : [];
@@ -392,55 +602,47 @@ const BoardModule = (() => {
 
     /** @type {Record<number, string[]>} */
     const byScore = {};
+    /** @type {Record<string, number>} */
+    const newScores = {};
     active.forEach((colorId) => {
       const raw = cumulative[colorId];
       const score = Math.max(0, Math.min(TRACK_MAX, typeof raw === "number" ? raw : 0));
+      newScores[colorId] = score;
       if (!byScore[score]) byScore[score] = [];
       byScore[score].push(colorId);
     });
 
-    clearBoardCubes();
+    const scoreModalOpen = document.body.classList.contains("score-module-open");
+    // On open, only hop when Round changed scores while we were closed.
+    const allowHop = options.fromOpen ? scoresDirty : true;
+    const canAnimate =
+      allowHop &&
+      cubeHopEnabled() &&
+      isActive() &&
+      !scoreModalOpen &&
+      Object.keys(cubeScoreByColor).length > 0;
 
-    Object.entries(byScore).forEach(([scoreStr, colors]) => {
-      const score = Number(scoreStr);
-      const cell = trackEl.querySelector(`.board-track__cell[data-score="${score}"]`);
-      if (!cell) return;
-
-      const zone = measureZoneInCubesLayer(cell);
-      if (!zone.width || !zone.height) return;
-
-      const size = cubeSizeForCell(zone.width, zone.height);
-      const layouts = layoutsForCell(colors, score, zone.width, zone.height, size);
-
-      colors.forEach((colorId) => {
-        const layout = layouts[colorId];
-        const cube = document.createElement("div");
-        cube.className = `board-cube board-cube--${colorId}`;
-        cube.dataset.color = colorId;
-        cube.setAttribute("role", "button");
-        cube.tabIndex = 0;
-        cube.title = `${RoundModule.getPlayerName(colorId)}: ${score}`;
-        cube.setAttribute(
-          "aria-label",
-          `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
-        );
-        cube.style.setProperty("--cube-size", `${size}px`);
-        cube.style.left = `${zone.cx}px`;
-        cube.style.top = `${zone.cy}px`;
-        cube.style.transform =
-          `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
-          `rotateZ(${layout.azimuth}deg)`;
-
-        CUBE_FACES.forEach((face) => {
-          const faceEl = document.createElement("div");
-          faceEl.className = `board-cube__face board-cube__face--${face}`;
-          faceEl.setAttribute("aria-hidden", "true");
-          cube.appendChild(faceEl);
-        });
-
-        cubesEl.appendChild(cube);
+    /** @type {Array<{ color: string, from: number, to: number }>} */
+    const movers = [];
+    if (canAnimate) {
+      active.forEach((colorId) => {
+        const from = cubeScoreByColor[colorId];
+        const to = newScores[colorId];
+        if (typeof from === "number" && from !== to) {
+          movers.push({ color: colorId, from, to });
+        }
       });
-    });
+    }
+
+    scoresDirty = false;
+
+    if (movers.length) {
+      startHopAnimation(movers, byScore);
+      return;
+    }
+
+    stopHopAnimation();
+    rebuildCubesInstant(byScore);
   }
 
   function refresh() {
@@ -497,15 +699,30 @@ const BoardModule = (() => {
       }
       ensureTrack();
       resetView();
-      refresh();
+      // Open first so refreshCubes can animate hops from last-known seats.
       root.hidden = false;
       root.setAttribute("aria-hidden", "false");
       setBoardOpenClass(true);
+      syncToggleUi();
+      refreshCards();
+      // Wait two frames so layout/zone measures are valid after becoming visible.
       requestAnimationFrame(() => {
-        refreshCubes();
-        requestAnimationFrame(refreshCubes);
+        requestAnimationFrame(() => {
+          if (!isActive()) return;
+          refreshCubes({ fromOpen: true });
+        });
       });
     } else {
+      stopHopAnimation();
+      // Keep seats + last-known scores so a later open can hop from them.
+      // If a hop was interrupted, snap stored scores to each cube's current zone.
+      cubesEl?.querySelectorAll(".board-cube").forEach((cube) => {
+        const colorId = cube.dataset.color;
+        const score = Number(cube.dataset.score);
+        if (colorId && Number.isFinite(score)) {
+          cubeScoreByColor[colorId] = score;
+        }
+      });
       endDrag();
       pinch = null;
       tiltGesture = null;
@@ -513,8 +730,8 @@ const BoardModule = (() => {
       root.setAttribute("aria-hidden", "true");
       setBoardOpenClass(false);
       root.classList.remove("board-module--panning");
+      syncToggleUi();
     }
-    syncToggleUi();
   }
 
   function toggleMode() {
@@ -823,5 +1040,7 @@ const BoardModule = (() => {
     open,
     close,
     refresh,
+    markScoresChanged,
+    clearCubeIdentity,
   };
 })();
