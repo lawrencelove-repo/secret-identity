@@ -11,36 +11,13 @@ const BoardModule = (() => {
   const MAX_SCALE = 5.5;
   const DEFAULT_TILT_X = 38;
   const DEFAULT_TILT_Y = -10;
-  const MIN_TILT_X = -12;
-  const MAX_TILT_X = 62;
-  const MIN_TILT_Y = -48;
-  const MAX_TILT_Y = 48;
+  const MIN_TILT_X = -85;
+  const MAX_TILT_X = 85;
+  const MIN_TILT_Y = -90;
+  const MAX_TILT_Y = 90;
   const PAN_CLICK_THRESHOLD = 6;
-  /** Isometric cube path geometry (equal edge lengths in world space). */
-  const CUBE_SVG_NS = "http://www.w3.org/2000/svg";
-  // Side length N=16 in isometric: top + vertical edges share length N.
-  const CUBE_SVG_VB = { w: 32, h: 32 };
-  const CUBE_SVG_PATHS = {
-    left: "M0 8 L16 16 L16 32 L0 24 Z",
-    right: "M32 8 L16 16 L16 32 L32 24 Z",
-    top: "M16 0 L32 8 L16 16 L0 8 Z",
-  };
-
-  function buildCubeSvg() {
-    const svg = document.createElementNS(CUBE_SVG_NS, "svg");
-    svg.setAttribute("class", "board-cube__svg");
-    svg.setAttribute("viewBox", `0 0 ${CUBE_SVG_VB.w} ${CUBE_SVG_VB.h}`);
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("focusable", "false");
-
-    ["left", "right", "top"].forEach((face) => {
-      const path = document.createElementNS(CUBE_SVG_NS, "path");
-      path.setAttribute("class", `board-cube__svg-face board-cube__svg-face--${face}`);
-      path.setAttribute("d", CUBE_SVG_PATHS[face]);
-      svg.appendChild(path);
-    });
-    return svg;
-  }
+  const TILT_SENSITIVITY = 0.4;
+  const CUBE_FACES = ["front", "back", "right", "left", "top", "bottom"];
 
   const SECTION_COLORS = {
     yellow: { mid: "#e8c230", light: "#f2d85a", dark: "#c9a018" },
@@ -119,8 +96,8 @@ const BoardModule = (() => {
 
   function applyTilt() {
     if (!assemblyEl) return;
-    assemblyEl.style.setProperty("--tilt-x", `${tiltX}deg`);
-    assemblyEl.style.setProperty("--tilt-y", `${tiltY}deg`);
+    // Same model as the reference demo: rotateX/rotateY on the 3D root.
+    assemblyEl.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
   }
 
   function applyTransform() {
@@ -151,6 +128,12 @@ const BoardModule = (() => {
     applyPanZoom();
   }
 
+  function threeFingerMidpoint(touches) {
+    const x = (touches[0].clientX + touches[1].clientX + touches[2].clientX) / 3;
+    const y = (touches[0].clientY + touches[1].clientY + touches[2].clientY) / 3;
+    return { x, y };
+  }
+
   function touchCentroid(touches) {
     let x = 0;
     let y = 0;
@@ -158,7 +141,8 @@ const BoardModule = (() => {
       x += touches[i].clientX;
       y += touches[i].clientY;
     }
-    return { x: x / touches.length, y: y / touches.length };
+    const n = touches.length || 1;
+    return { x: x / n, y: y / n };
   }
 
   function hashString(value) {
@@ -381,15 +365,17 @@ const BoardModule = (() => {
           `${RoundModule.getPlayerName(colorId)} at ${score} points. Open score.`
         );
         cube.style.setProperty("--cube-size", `${size}px`);
-        // Footprint center on the track; SVG draws equal-edged isometric cube above it.
+        // Center on the track plane; lift by half-size so the bottom face rests on z=0.
         cube.style.transform =
-          `translate(${layout.x}px, ${layout.y}px) rotate(${layout.rot}deg)`;
+          `translate3d(${layout.x}px, ${layout.y}px, ${size / 2}px) ` +
+          `rotateZ(${layout.rot}deg)`;
 
-        const shadow = document.createElement("span");
-        shadow.className = "board-cube__shadow";
-        shadow.setAttribute("aria-hidden", "true");
-        cube.appendChild(shadow);
-        cube.appendChild(buildCubeSvg());
+        CUBE_FACES.forEach((face) => {
+          const faceEl = document.createElement("div");
+          faceEl.className = `board-cube__face board-cube__face--${face}`;
+          faceEl.setAttribute("aria-hidden", "true");
+          cube.appendChild(faceEl);
+        });
 
         const cx =
           ((cellRect.left + cellRect.width / 2 - trackRect.left) / trackRect.width) * 100;
@@ -607,22 +593,25 @@ const BoardModule = (() => {
     zoomAt(event.clientX, event.clientY, factor);
   }
 
-  /** Touch: 2-finger pinch zoom, 3-finger tilt. */
+  /** Touch: 2-finger pinch zoom, 3-finger tilt (same model as the CSS 3D demo). */
   function onTouchStart(event) {
     if (!isActive()) return;
-    if (event.touches.length >= 3) {
+    if (event.touches.length === 3) {
       event.preventDefault();
       endDrag();
       pinch = null;
-      const center = touchCentroid(event.touches);
+      const midpoint = threeFingerMidpoint(event.touches);
       tiltGesture = {
-        startX: center.x,
-        startY: center.y,
+        startX: midpoint.x,
+        startY: midpoint.y,
         originTiltX: tiltX,
         originTiltY: tiltY,
       };
       root?.classList.add("board-module--panning");
       return;
+    }
+    if (event.touches.length > 3) {
+      tiltGesture = null;
     }
     if (event.touches.length === 2) {
       event.preventDefault();
@@ -641,14 +630,22 @@ const BoardModule = (() => {
   function onTouchMove(event) {
     if (!isActive()) return;
 
-    if (tiltGesture && event.touches.length >= 3) {
+    if (tiltGesture && event.touches.length === 3) {
       event.preventDefault();
-      const center = touchCentroid(event.touches);
-      const dx = center.x - tiltGesture.startX;
-      const dy = center.y - tiltGesture.startY;
-      // Dragging down increases looking-down tilt; sideways yaws the board.
-      tiltX = clamp(tiltGesture.originTiltX + dy * 0.18, MIN_TILT_X, MAX_TILT_X);
-      tiltY = clamp(tiltGesture.originTiltY + dx * 0.16, MIN_TILT_Y, MAX_TILT_Y);
+      const midpoint = threeFingerMidpoint(event.touches);
+      const dx = midpoint.x - tiltGesture.startX;
+      const dy = midpoint.y - tiltGesture.startY;
+      // Match demo: horizontal → rotateY, vertical inverted → rotateX.
+      tiltY = clamp(
+        tiltGesture.originTiltY + dx * TILT_SENSITIVITY,
+        MIN_TILT_Y,
+        MAX_TILT_Y
+      );
+      tiltX = clamp(
+        tiltGesture.originTiltX - dy * TILT_SENSITIVITY,
+        MIN_TILT_X,
+        MAX_TILT_X
+      );
       applyTilt();
       return;
     }

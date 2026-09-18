@@ -3773,10 +3773,12 @@ body.board-module-open .score-reset-confirm {
   align-items: center;
   justify-content: center;
   transform-origin: 0 0;
-  will-change: transform;
+  /* Required: without this, pan/zoom transform flattens all child 3D. */
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
-/* Perspective lives here (not on the pan/zoom node) so child 3D is preserved. */
+/* Perspective on the non-panned node (same role as #touch-area in the demo). */
 .board-module__scene {
   position: relative;
   width: 100%;
@@ -3784,8 +3786,8 @@ body.board-module-open .score-reset-confirm {
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1600px;
-  perspective-origin: 50% 42%;
+  perspective: 800px;
+  perspective-origin: 50% 45%;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
 }
@@ -3799,15 +3801,13 @@ body.board-module-open .score-reset-confirm {
   --card-short: calc(var(--board-size) * 0.112);
   --frame-inset: calc(var(--board-size) * 0.155);
   --board-depth: calc(var(--board-size) * 0.045);
-  --tilt-x: 38deg;
-  --tilt-y: -10deg;
   position: relative;
   width: var(--board-size);
   height: var(--board-size);
   flex-shrink: 0;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transform: rotateX(38deg) rotateY(-10deg);
   transform-origin: center center;
 }
 
@@ -4038,71 +4038,78 @@ body.board-module-open .score-reset-confirm {
   pointer-events: none;
   z-index: 5;
   overflow: visible;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .board-cube {
-  /* Anchor = center of the cube's contact patch on the track plane. */
+  /* Equal H/W/L CSS cube; sits on the track (bottom face at local z = -half). */
   --cube-size: 18px;
-  --cube-top: color-mix(in srgb, var(--cube-color) 88%, #fff 12%);
-  --cube-left: color-mix(in srgb, var(--cube-color) 72%, #000 28%);
-  --cube-right: color-mix(in srgb, var(--cube-color) 55%, #000 45%);
   position: absolute;
   width: var(--cube-size);
   height: var(--cube-size);
   margin-left: calc(var(--cube-size) / -2);
-  /* Bottom vertex of the isometric cube sits on the track plane. */
-  margin-top: calc(var(--cube-size) * -1);
+  margin-top: calc(var(--cube-size) / -2);
   pointer-events: auto;
   cursor: pointer;
   background: transparent;
   border-radius: 0;
   box-shadow: none;
-  overflow: visible;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
-/* Contact shadow on the board, under the isometric cube. */
-.board-cube__shadow {
+.board-cube__face {
   position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: 0;
-  height: 28%;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Drawn cube: equal edge lengths (isometric projection of a true cube). */
-.board-cube__svg {
-  position: absolute;
+  width: var(--cube-size);
+  height: var(--cube-size);
   left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 1;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+  top: 0;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      transparent 45%,
+      rgba(0, 0, 0, 0.18) 100%
+    ),
+    var(--cube-face-tint, var(--cube-color));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-.board-cube__svg-face {
-  stroke: rgba(0, 0, 0, 0.22);
-  stroke-width: 0.4;
-  stroke-linejoin: round;
+/* Board plane is XY; +Z is out of the board. Lid = +Z (sample "front"). */
+.board-cube__face--front {
+  transform: translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 90%, #fff 10%);
 }
 
-.board-cube__svg-face--top {
-  fill: var(--cube-top, var(--cube-color));
+.board-cube__face--back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 48%, #000 52%);
 }
 
-.board-cube__svg-face--left {
-  fill: var(--cube-left, var(--cube-color));
+.board-cube__face--right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 72%, #000 28%);
 }
 
-.board-cube__svg-face--right {
-  fill: var(--cube-right, var(--cube-color));
+.board-cube__face--left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 64%, #000 36%);
+}
+
+.board-cube__face--top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 80%, #000 20%);
+}
+
+.board-cube__face--bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
+  --cube-face-tint: color-mix(in srgb, var(--cube-color) 40%, #000 60%);
 }
 
 .board-cube--green { --cube-color: var(--color-green); }
