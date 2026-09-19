@@ -1007,12 +1007,16 @@ const RoundModule = (() => {
   }
 
   function hasPersistedGame() {
-    if (typeof GameProgress === "undefined") return false;
-    const data = GameProgress.load();
-    if (!data || !data.gameStarted) return false;
-    const colors = Array.isArray(data.colors) ? data.colors : [];
-    const valid = colors.filter((color) => PLAYER_COLORS.includes(color));
-    return valid.length >= MIN_PLAYERS;
+    try {
+      if (typeof GameProgress === "undefined") return false;
+      const data = GameProgress.load();
+      if (!data || !data.gameStarted) return false;
+      const colors = Array.isArray(data.colors) ? data.colors : [];
+      const valid = colors.filter((color) => PLAYER_COLORS.includes(color));
+      return valid.length >= MIN_PLAYERS;
+    } catch {
+      return false;
+    }
   }
 
   function restorePersistedGame() {

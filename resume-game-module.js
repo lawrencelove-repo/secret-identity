@@ -24,7 +24,8 @@ const ResumeGameModule = (() => {
 
   function open() {
     if (!root) return;
-    if (typeof NewGameModule !== "undefined") NewGameModule.close();
+    // Don't reference NewGameModule here — boot may call open() while that
+    // const is still in the temporal dead zone.
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
     document.body.classList.add("resume-game-module-open");

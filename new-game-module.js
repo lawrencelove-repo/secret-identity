@@ -204,16 +204,20 @@ const NewGameModule = (() => {
     }
   });
 
-  // Fresh load — resume saved progress, otherwise new-game over the boot background.
-  if (typeof RoundModule !== "undefined" && RoundModule.hasPersistedGame()) {
-    if (typeof ResumeGameModule !== "undefined") {
-      ResumeGameModule.open();
-    } else {
-      open({ fromGame: false });
-    }
-  } else {
-    open({ fromGame: false });
-  }
-
   return { open, close, isOpen };
+})();
+
+// Boot after NewGameModule is fully initialized (avoid TDZ with ResumeGameModule).
+(function bootStartScreen() {
+  try {
+    if (typeof RoundModule !== "undefined" && RoundModule.hasPersistedGame()) {
+      if (typeof ResumeGameModule !== "undefined") {
+        ResumeGameModule.open();
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("Resume boot failed; falling back to New Game.", err);
+  }
+  NewGameModule.open({ fromGame: false });
 })();
