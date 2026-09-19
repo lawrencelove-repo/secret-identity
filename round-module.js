@@ -253,6 +253,7 @@ const RoundModule = (() => {
     if (!setPlayerScore(roundNumber, colorId, points)) return false;
     round.marks[colorId] = nextMarks;
     round.tabulated[colorId] = true;
+    persistGame();
     return true;
   }
 
@@ -453,6 +454,7 @@ const RoundModule = (() => {
     if (!PLAYER_COLORS.includes(colorId)) return false;
     const trimmed = name == null ? "" : String(name).trim();
     playerNames[colorId] = trimmed || COLOR_LABELS[colorId];
+    persistGame();
     refreshView();
     return true;
   }
@@ -642,6 +644,8 @@ const RoundModule = (() => {
     } else if (typeof BoardModule !== "undefined") {
       BoardModule.markScoresChanged();
     }
+
+    if (gameStarted) persistGame();
   }
 
   function openConfirm(targetRound) {
@@ -881,6 +885,7 @@ const RoundModule = (() => {
     summaryRoundFromClick = null;
     hideScoreboard();
     document.body.classList.remove("round-reviewing");
+    persistGame();
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
@@ -934,6 +939,181 @@ const RoundModule = (() => {
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.showToggle(true);
     }
+    persistGame();
+    return true;
+  }
+
+  function slotCharacterFromName(name, slotNumber) {
+    if (!name) return null;
+    let found = null;
+    if (typeof CharacterCatalog !== "undefined" && CharacterCatalog.listEnabled) {
+      found = CharacterCatalog.listEnabled().find((entry) => entry.name === name) || null;
+    }
+    if (!found && typeof CHARACTERS !== "undefined") {
+      found = CHARACTERS.find((entry) => entry.name === name) || null;
+    }
+    if (found && typeof toSlotCharacter === "function") {
+      return toSlotCharacter(found, slotNumber);
+    }
+    return {
+      number: slotNumber,
+      name: String(name),
+      categories: [],
+      category: null,
+      description: null,
+      longDescription: null,
+    };
+  }
+
+  function serializeGame() {
+    if (!gameStarted) return null;
+    return {
+      v: 1,
+      gameStarted: true,
+      colors: [...activePlayerColors],
+      names: { ...playerNames },
+      currentRound,
+      viewingRound,
+      winnerAnnounced: Boolean(winnerAnnounced),
+      rounds: rounds.map((round) => ({
+        number: round.number,
+        characters: Array.isArray(round.characters)
+          ? round.characters.map((entry) => (entry && entry.name ? entry.name : null))
+          : null,
+        scores: { ...round.scores },
+        marks: Object.fromEntries(
+          Object.entries(round.marks || {}).map(([color, list]) => [
+            color,
+            Array.isArray(list) ? [...list] : [],
+          ])
+        ),
+        tabulated: { ...round.tabulated },
+      })),
+    };
+  }
+
+  function persistGame() {
+    if (typeof GameProgress === "undefined") return;
+    if (!gameStarted) {
+      GameProgress.clear();
+      return;
+    }
+    const snapshot = serializeGame();
+    if (snapshot) GameProgress.save(snapshot);
+  }
+
+  function clearPersistedGame() {
+    if (typeof GameProgress !== "undefined") GameProgress.clear();
+  }
+
+  function hasPersistedGame() {
+    if (typeof GameProgress === "undefined") return false;
+    const data = GameProgress.load();
+    if (!data || !data.gameStarted) return false;
+    const colors = Array.isArray(data.colors) ? data.colors : [];
+    const valid = colors.filter((color) => PLAYER_COLORS.includes(color));
+    return valid.length >= MIN_PLAYERS;
+  }
+
+  function restorePersistedGame() {
+    if (typeof GameProgress === "undefined") return false;
+    const data = GameProgress.load();
+    if (!data || !data.gameStarted) return false;
+
+    const colors = (Array.isArray(data.colors) ? data.colors : []).filter((color) =>
+      PLAYER_COLORS.includes(color)
+    );
+    if (colors.length < MIN_PLAYERS) return false;
+
+    setActivePlayers(colors);
+    resetPlayerNames();
+    if (data.names && typeof data.names === "object") {
+      Object.keys(data.names).forEach((color) => {
+        if (!PLAYER_COLORS.includes(color)) return;
+        const label = String(data.names[color] || "").trim();
+        if (label) playerNames[color] = label;
+      });
+    }
+
+    rounds = createRounds();
+    const savedRounds = Array.isArray(data.rounds) ? data.rounds : [];
+    savedRounds.forEach((saved) => {
+      const round = getRound(saved.number);
+      if (!round) return;
+      if (Array.isArray(saved.characters)) {
+        round.characters = saved.characters.map((name, index) =>
+          slotCharacterFromName(name, index + 1)
+        );
+      }
+      if (saved.scores && typeof saved.scores === "object") {
+        PLAYER_COLORS.forEach((color) => {
+          const value = saved.scores[color];
+          round.scores[color] =
+            value === null || value === undefined
+              ? null
+              : Number.isInteger(Number(value))
+                ? Number(value)
+                : null;
+        });
+      }
+      if (saved.marks && typeof saved.marks === "object") {
+        PLAYER_COLORS.forEach((color) => {
+          round.marks[color] = Array.isArray(saved.marks[color])
+            ? [...saved.marks[color]]
+            : [];
+        });
+      }
+      if (saved.tabulated && typeof saved.tabulated === "object") {
+        PLAYER_COLORS.forEach((color) => {
+          round.tabulated[color] = Boolean(saved.tabulated[color]);
+        });
+      }
+    });
+
+    currentRound = Math.min(
+      TOTAL_ROUNDS,
+      Math.max(1, Number(data.currentRound) || 1)
+    );
+    viewingRound = Math.min(
+      TOTAL_ROUNDS,
+      Math.max(1, Number(data.viewingRound) || currentRound)
+    );
+    winnerAnnounced = Boolean(data.winnerAnnounced);
+    summaryRoundFromClick = null;
+    pendingAdvanceTo = null;
+    gameStarted = true;
+
+    if (typeof WinnerModule !== "undefined") WinnerModule.close();
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.clearCubeIdentity();
+      BoardModule.setActive(false);
+    }
+
+    // Ensure current round has characters if somehow missing.
+    ensureRoundDealt(currentRound);
+    if (!getRound(viewingRound)?.characters) {
+      viewingRound = currentRound;
+    }
+
+    restoreColorOrder();
+    updateActivePlayerVisibility();
+    displayRound(viewingRound);
+
+    document.body.classList.remove("is-boot");
+    document.body.classList.add("is-playing");
+    const menuToggle = document.getElementById("app-menu-toggle");
+    if (menuToggle) menuToggle.hidden = false;
+    if (typeof CharactersFullscreen !== "undefined") {
+      CharactersFullscreen.showToggle(true);
+    }
+
+    persistGame();
+
+    // Finish the end-game flow if the last score was saved but the winner UI never opened.
+    if (isGameComplete() && !winnerAnnounced) {
+      notifyGameCompleteIfNeeded();
+    }
+
     return true;
   }
 
@@ -942,6 +1122,10 @@ const RoundModule = (() => {
     init,
     startNewGame,
     hasActiveGame,
+    hasPersistedGame,
+    restorePersistedGame,
+    clearPersistedGame,
+    persistGame,
     isGameComplete,
     getWinners,
     getPodium,

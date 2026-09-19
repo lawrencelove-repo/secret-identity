@@ -1,5 +1,5 @@
 /* Minimal offline cache for Secret Identity PWA */
-const CACHE_NAME = "secret-identity-v35";
+const CACHE_NAME = "secret-identity-v36";
 const ASSETS = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const ASSETS = [
   "./round-module.js",
   "./score-module.js",
   "./winner-module.js",
+  "./resume-game-module.js",
   "./new-game-module.js",
   "./board-module.js",
   "./vendor/fireworks-js.umd.js",

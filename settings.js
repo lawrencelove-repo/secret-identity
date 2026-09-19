@@ -174,3 +174,101 @@ const AppSettings = (() => {
     setTextScaleIndex,
   };
 })();
+
+/**
+ * Single in-progress game snapshot.
+ * Cookie when it fits; always mirrored to localStorage (size / offline safety).
+ */
+const GameProgress = (() => {
+  const KEY = "si_game_progress";
+  const COOKIE_MAX = 3500;
+
+  function readCookie(name) {
+    const match = document.cookie.match(
+      new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]*)`)
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function writeCookie(name, value) {
+    const maxAge = 60 * 60 * 24 * 365 * 2;
+    const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+    document.cookie =
+      `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; expires=${expires}; SameSite=Lax`;
+  }
+
+  function clearCookie(name) {
+    document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  }
+
+  function save(data) {
+    if (!data) {
+      clear();
+      return false;
+    }
+    let json;
+    try {
+      json = JSON.stringify(data);
+    } catch {
+      return false;
+    }
+
+    try {
+      localStorage.setItem(KEY, json);
+    } catch {
+      /* private mode / quota */
+    }
+
+    try {
+      if (json.length <= COOKIE_MAX) {
+        writeCookie(KEY, json);
+      } else {
+        // Flag only — full payload lives in localStorage.
+        writeCookie(KEY, "1");
+      }
+    } catch {
+      /* ignore cookie failures */
+    }
+    return true;
+  }
+
+  function load() {
+    const fromCookie = readCookie(KEY);
+    if (fromCookie && fromCookie !== "1") {
+      try {
+        const parsed = JSON.parse(fromCookie);
+        if (parsed && typeof parsed === "object") return parsed;
+      } catch {
+        /* fall through */
+      }
+    }
+
+    try {
+      const fromStorage = localStorage.getItem(KEY);
+      if (fromStorage) {
+        const parsed = JSON.parse(fromStorage);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // Cookie flag with missing storage — treat as no game.
+    return null;
+  }
+
+  function clear() {
+    clearCookie(KEY);
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function has() {
+    return load() !== null;
+  }
+
+  return { save, load, clear, has };
+})();

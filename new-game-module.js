@@ -152,6 +152,9 @@ const NewGameModule = (() => {
   });
 
   confirmEl?.addEventListener("click", (event) => {
+    if (typeof ResumeGameModule !== "undefined" && ResumeGameModule.isOpen()) {
+      return;
+    }
     if (event.target.closest("[data-new-game-confirm-no]")) {
       closeConfirm();
       return;
@@ -201,8 +204,16 @@ const NewGameModule = (() => {
     }
   });
 
-  // Fresh load — show new-game module over blank background before round 1.
-  open({ fromGame: false });
+  // Fresh load — resume saved progress, otherwise new-game over the boot background.
+  if (typeof RoundModule !== "undefined" && RoundModule.hasPersistedGame()) {
+    if (typeof ResumeGameModule !== "undefined") {
+      ResumeGameModule.open();
+    } else {
+      open({ fromGame: false });
+    }
+  } else {
+    open({ fromGame: false });
+  }
 
   return { open, close, isOpen };
 })();
