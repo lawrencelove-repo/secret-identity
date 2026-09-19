@@ -1106,6 +1106,7 @@ function dealCharacters(count, excludeNames = []) {
 
 function bindCharacterBoxClicks() {
   document.querySelector(".column--left")?.addEventListener("click", (event) => {
+    if (typeof ConfiguratorModule !== "undefined" && ConfiguratorModule.isActive()) return;
     if (event.target.closest(".round-indicator")) return;
     const box = event.target.closest(".box--black");
     if (!box || !box._character) return;

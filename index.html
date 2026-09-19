@@ -1137,6 +1137,82 @@
     </div>
   </div>
 
+  <!-- Main-stage sizing configurator (this branch) -->
+  <div
+    class="configurator-inspector"
+    id="configurator-inspector"
+    hidden
+    aria-live="polite"
+  >Click an element…</div>
+
+  <aside
+    class="configurator-module"
+    id="configurator-module"
+    hidden
+    aria-hidden="true"
+    aria-label="Sizing configurator"
+  >
+    <div class="configurator-module__chrome">
+      <div class="configurator-module__title-row">
+        <h2 class="configurator-module__title">Sizing configurator</h2>
+        <button
+          type="button"
+          class="configurator-module__icon-btn"
+          data-configurator-collapse
+          aria-label="Collapse or expand panel"
+        >
+          ▢
+        </button>
+      </div>
+
+      <div class="configurator-module__toolbar">
+        <label class="configurator-field">
+          <span class="configurator-field__label">Layout</span>
+          <select id="configurator-layout" class="configurator-select">
+            <option value="auto">Auto (device)</option>
+            <option value="landscape">Landscape</option>
+            <option value="portrait">Portrait</option>
+            <option value="fullscreen">Characters fullscreen</option>
+          </select>
+        </label>
+        <label class="configurator-field">
+          <span class="configurator-field__label">Form factor</span>
+          <select id="configurator-form-factor" class="configurator-select">
+            <option value="auto">Auto (this viewport)</option>
+            <option value="ipad-landscape">iPad landscape</option>
+            <option value="ipad-portrait">iPad portrait</option>
+            <option value="ipad-pro-landscape">iPad Pro landscape</option>
+            <option value="ipad-pro-portrait">iPad Pro portrait</option>
+            <option value="desktop">Desktop 1440×900</option>
+            <option value="compact">Compact phone</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="configurator-module__target">
+        <div class="configurator-module__target-title" id="configurator-target-title">
+          No selection
+        </div>
+        <code class="configurator-module__target-path" id="configurator-target-path">
+          Click an element on the stage
+        </code>
+      </div>
+
+      <div class="configurator-module__props" id="configurator-props">
+        <p class="configurator-empty">Tap an element on the stage to edit its sizing tokens.</p>
+      </div>
+
+      <div class="configurator-module__actions">
+        <button type="button" class="configurator-btn" data-configurator-copy>Copy CSS</button>
+        <button type="button" class="configurator-btn" data-configurator-download>Download .txt</button>
+        <button type="button" class="configurator-btn configurator-btn--ghost" data-configurator-reset>
+          Reset
+        </button>
+      </div>
+      <p class="configurator-module__status" id="configurator-status" aria-live="polite"></p>
+    </div>
+  </aside>
+
   <script src="vendor/fireworks-js.umd.js"></script>
   <script src="viewport.js"></script>
   <script src="settings.js"></script>
@@ -1151,6 +1227,7 @@
   <script src="new-game-module.js"></script>
   <script src="character-edit-module.js"></script>
   <script src="board-module.js"></script>
+  <script src="configurator-module.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

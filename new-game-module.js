@@ -219,7 +219,9 @@ const NewGameModule = (() => {
 })();
 
 // Boot after NewGameModule is fully initialized (avoid TDZ with ResumeGameModule).
+// Configurator branch owns startup when its shell is present.
 (function bootStartScreen() {
+  if (document.getElementById("configurator-module")) return;
   try {
     if (typeof RoundModule !== "undefined" && RoundModule.hasPersistedGame()) {
       if (typeof ResumeGameModule !== "undefined") {

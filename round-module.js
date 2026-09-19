@@ -767,6 +767,7 @@ const RoundModule = (() => {
   function bindUi() {
     document.querySelectorAll(".round-indicator").forEach((indicator) => {
       indicator.addEventListener("click", (event) => {
+        if (typeof ConfiguratorModule !== "undefined" && ConfiguratorModule.isActive()) return;
         const btn = event.target.closest("[data-round]");
         if (!btn || !indicator.contains(btn)) return;
         requestRound(Number(btn.dataset.round));
@@ -774,6 +775,7 @@ const RoundModule = (() => {
     });
 
     document.querySelector(".column--right")?.addEventListener("click", (event) => {
+      if (typeof ConfiguratorModule !== "undefined" && ConfiguratorModule.isActive()) return;
       const box = event.target.closest(".box[data-color]");
       if (!box) return;
       const colorId = box.dataset.color;
