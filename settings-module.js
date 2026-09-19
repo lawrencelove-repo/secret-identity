@@ -3,6 +3,7 @@
  */
 const SettingsModule = (() => {
   const root = document.getElementById("settings-module");
+  const refreshConfirmEl = document.getElementById("force-refresh-confirm");
 
   function closeMenu() {
     const panel = document.getElementById("app-menu-panel");
@@ -44,9 +45,56 @@ const SettingsModule = (() => {
     }
   }
 
+  function openRefreshConfirm() {
+    if (!refreshConfirmEl) return;
+    refreshConfirmEl.hidden = false;
+    refreshConfirmEl.setAttribute("aria-hidden", "false");
+    refreshConfirmEl.querySelector("[data-force-refresh-yes]")?.focus();
+  }
+
+  function closeRefreshConfirm() {
+    if (!refreshConfirmEl || refreshConfirmEl.hidden) return;
+    refreshConfirmEl.hidden = true;
+    refreshConfirmEl.setAttribute("aria-hidden", "true");
+  }
+
+  /**
+   * PWA-safe refresh: unregister service workers, delete Cache Storage,
+   * then reload. Keeps cookies / localStorage (saved game + settings).
+   * A plain location.reload() is not enough on iPad home-screen PWAs.
+   */
+  async function forceRefreshApp() {
+    closeRefreshConfirm();
+    close();
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.unregister()));
+      }
+    } catch {
+      /* continue — still try caches + reload */
+    }
+
+    try {
+      if (typeof caches !== "undefined") {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+    } catch {
+      /* continue */
+    }
+
+    // Bust any remaining HTTP cache on the document navigation.
+    const url = new URL(window.location.href);
+    url.searchParams.set("_refresh", String(Date.now()));
+    window.location.replace(url.toString());
+  }
+
   function open() {
     if (!root) return;
     closeMenu();
+    closeRefreshConfirm();
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
@@ -60,6 +108,7 @@ const SettingsModule = (() => {
 
   function close() {
     if (!root || root.hidden) return;
+    closeRefreshConfirm();
     root.hidden = true;
     root.setAttribute("aria-hidden", "true");
     document.body.classList.remove("settings-module-open");
@@ -102,8 +151,27 @@ const SettingsModule = (() => {
   }
 
   root?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-settings-force-refresh]")) {
+      openRefreshConfirm();
+      return;
+    }
     if (event.target.closest("[data-settings-close]")) {
       close();
+    }
+  });
+
+  refreshConfirmEl?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-force-refresh-no]")) {
+      closeRefreshConfirm();
+      root?.querySelector("[data-settings-force-refresh]")?.focus();
+      return;
+    }
+    if (event.target.closest("[data-force-refresh-yes]")) {
+      forceRefreshApp();
+      return;
+    }
+    if (event.target.closest("[data-force-refresh-close]")) {
+      closeRefreshConfirm();
     }
   });
 
@@ -112,12 +180,17 @@ const SettingsModule = (() => {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isOpen()) {
+    if (event.key !== "Escape") return;
+    if (refreshConfirmEl && !refreshConfirmEl.hidden) {
+      closeRefreshConfirm();
+      return;
+    }
+    if (isOpen()) {
       close();
     }
   });
 
   bindInputs();
 
-  return { open, close, isOpen };
+  return { open, close, isOpen, forceRefreshApp };
 })();

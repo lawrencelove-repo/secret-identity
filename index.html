@@ -529,7 +529,7 @@
         </div>
       </div>
       <!-- Keep in sync with CACHE_NAME in sw.js -->
-      <p class="app-version">v44</p>
+      <p class="app-version">v45</p>
     </div>
   </div>
 
@@ -564,7 +564,7 @@
         </div>
       </div>
       <!-- Keep in sync with CACHE_NAME in sw.js -->
-      <p class="app-version" id="app-version">v44</p>
+      <p class="app-version" id="app-version">v45</p>
     </div>
   </div>
 
@@ -691,8 +691,41 @@
         </div>
       </div>
       <div class="settings-module__actions">
+        <button type="button" class="settings-module__btn settings-module__btn--ghost" data-settings-force-refresh>
+          Force refresh
+        </button>
         <button type="button" class="settings-module__btn" data-settings-close>
           Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Force refresh confirm (PWA cache purge) -->
+  <div
+    class="new-game-confirm"
+    id="force-refresh-confirm"
+    hidden
+    aria-hidden="true"
+  >
+    <div class="new-game-confirm__backdrop" data-force-refresh-close></div>
+    <div
+      class="new-game-confirm__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="force-refresh-confirm-title"
+    >
+      <h2 class="new-game-confirm__title" id="force-refresh-confirm-title">Force refresh?</h2>
+      <p class="new-game-confirm__body">
+        This clears the app’s offline cache and reloads so you get the latest code.
+        Your saved game and settings are kept.
+      </p>
+      <div class="new-game-confirm__actions">
+        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-force-refresh-no>
+          Cancel
+        </button>
+        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-force-refresh-yes>
+          Refresh now
         </button>
       </div>
     </div>
