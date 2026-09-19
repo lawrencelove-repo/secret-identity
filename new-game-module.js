@@ -72,7 +72,6 @@ const NewGameModule = (() => {
 
   function openConfirm() {
     if (!confirmEl) return;
-    if (typeof WinnerModule !== "undefined") WinnerModule.close();
     confirmEl.hidden = false;
     confirmEl.setAttribute("aria-hidden", "false");
     confirmEl.querySelector("[data-new-game-confirm-yes]")?.focus();
@@ -101,12 +100,12 @@ const NewGameModule = (() => {
     if (panel) panel.hidden = true;
     if (toggle) toggle.setAttribute("aria-expanded", "false");
 
-    // Confirm for any started game (in progress or finished), then wipe save.
+    // Same path as Continue → New Game: confirm, then boot New Game screen.
     if (RoundModule.gameStarted) {
       openConfirm();
       return;
     }
-    open({ fromGame: true });
+    open({ fromGame: false });
   }
 
   function open(options = {}) {
@@ -127,6 +126,7 @@ const NewGameModule = (() => {
     document.body.classList.add("new-game-module-open");
     if (!openedFromGame) {
       document.body.classList.add("is-boot");
+      document.body.classList.remove("is-playing");
     }
     root.querySelector("[data-new-game-start]")?.focus();
   }
@@ -146,6 +146,7 @@ const NewGameModule = (() => {
       return;
     }
     if (event.target.closest("[data-new-game-cancel]")) {
+      // Boot / post-abandon New Game has no Cancel.
       if (!openedFromGame) return;
       close();
       return;
@@ -166,10 +167,9 @@ const NewGameModule = (() => {
     }
     if (event.target.closest("[data-new-game-confirm-yes]")) {
       closeConfirm();
-      // Wipe saved progress as soon as they confirm — don't wait for Start,
-      // and don't restore if they later Cancel the color screen.
-      RoundModule.clearPersistedGame();
-      open({ fromGame: true });
+      // Same as Continue → confirm: wipe save + in-memory game, boot New Game.
+      RoundModule.abandonGame();
+      open({ fromGame: false });
       return;
     }
     if (event.target.closest("[data-new-game-confirm-close]")) {

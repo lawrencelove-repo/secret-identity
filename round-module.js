@@ -1012,6 +1012,49 @@ const RoundModule = (() => {
     if (typeof GameProgress !== "undefined") GameProgress.clear();
   }
 
+  /**
+   * Discard the current game (save + in-memory) and return to boot UI state.
+   * Used after confirming New Game from the menu / Continue flow.
+   */
+  function abandonGame() {
+    clearPersistedGame();
+    gameStarted = false;
+    winnerAnnounced = false;
+    pendingAdvanceTo = null;
+    summaryRoundFromClick = null;
+    currentRound = 1;
+    viewingRound = 1;
+    rounds = createRounds();
+    resetPlayerNames();
+    hideScoreboard();
+    document.body.classList.remove(
+      "is-playing",
+      "round-reviewing",
+      "winner-module-open",
+      "board-module-open"
+    );
+    document.body.classList.add("is-boot");
+
+    if (typeof WinnerModule !== "undefined") WinnerModule.close();
+    if (typeof ScoreModule !== "undefined") ScoreModule.close();
+    if (typeof BoardModule !== "undefined") {
+      BoardModule.clearCubeIdentity();
+      BoardModule.setActive(false);
+    }
+    if (typeof CharactersFullscreen !== "undefined") {
+      CharactersFullscreen.setActive(false);
+      CharactersFullscreen.showToggle(false);
+    }
+
+    const menuToggle = document.getElementById("app-menu-toggle");
+    if (menuToggle) {
+      menuToggle.hidden = true;
+      menuToggle.setAttribute("aria-expanded", "false");
+    }
+    const menuPanel = document.getElementById("app-menu-panel");
+    if (menuPanel) menuPanel.hidden = true;
+  }
+
   function hasPersistedGame() {
     try {
       if (typeof GameProgress === "undefined") return false;
@@ -1135,6 +1178,7 @@ const RoundModule = (() => {
     hasPersistedGame,
     restorePersistedGame,
     clearPersistedGame,
+    abandonGame,
     persistGame,
     isGameComplete,
     getWinners,

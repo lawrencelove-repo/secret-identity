@@ -75,7 +75,7 @@ const ResumeGameModule = (() => {
     closeConfirm();
     close();
     if (typeof RoundModule !== "undefined") {
-      RoundModule.clearPersistedGame();
+      RoundModule.abandonGame();
     }
     if (typeof NewGameModule !== "undefined") {
       NewGameModule.open({ fromGame: false });
