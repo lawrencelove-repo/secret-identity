@@ -154,6 +154,10 @@ const NewGameModule = (() => {
   });
 
   confirmEl?.addEventListener("click", (event) => {
+    // Continue screen owns this confirm dialog while it's open.
+    if (typeof ResumeGameModule !== "undefined" && ResumeGameModule.isOpen()) {
+      return;
+    }
     if (event.target.closest("[data-new-game-confirm-no]")) {
       closeConfirm();
       return;
@@ -173,6 +177,9 @@ const NewGameModule = (() => {
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    if (typeof ResumeGameModule !== "undefined" && ResumeGameModule.isOpen()) {
+      return;
+    }
     if (confirmEl && !confirmEl.hidden) {
       closeConfirm();
       return;
