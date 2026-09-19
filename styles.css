@@ -2741,6 +2741,12 @@ body.is-boot .new-game-module__backdrop {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+  outline: none;
+}
+
+.new-game-module__btn:focus,
+.new-game-module__btn:focus-visible {
+  outline: none;
 }
 
 .new-game-module__btn--ghost {
