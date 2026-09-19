@@ -508,24 +508,28 @@
     aria-hidden="true"
   >
     <div class="resume-game-module__backdrop"></div>
-    <div
-      class="resume-game-module__dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="resume-game-title"
-    >
-      <h2 class="resume-game-module__title" id="resume-game-title">Continue?</h2>
-      <p class="resume-game-module__body">
-        A game is already in progress on this device.
-      </p>
-      <div class="resume-game-module__actions">
-        <button type="button" class="new-game-module__btn new-game-module__btn--start" data-resume-game>
-          Resume game
-        </button>
-        <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-resume-new-game>
-          New game
-        </button>
+    <div class="resume-game-module__stack">
+      <div
+        class="resume-game-module__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resume-game-title"
+      >
+        <h2 class="resume-game-module__title" id="resume-game-title">Continue?</h2>
+        <p class="resume-game-module__body">
+          A game is already in progress on this device.
+        </p>
+        <div class="resume-game-module__actions">
+          <button type="button" class="new-game-module__btn new-game-module__btn--start" data-resume-game>
+            Resume game
+          </button>
+          <button type="button" class="new-game-module__btn new-game-module__btn--ghost" data-resume-new-game>
+            New game
+          </button>
+        </div>
       </div>
+      <!-- Keep in sync with CACHE_NAME in sw.js -->
+      <p class="app-version">v39</p>
     </div>
   </div>
 
@@ -560,7 +564,7 @@
         </div>
       </div>
       <!-- Keep in sync with CACHE_NAME in sw.js -->
-      <p class="app-version" id="app-version">v38</p>
+      <p class="app-version" id="app-version">v39</p>
     </div>
   </div>
 

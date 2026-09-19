@@ -26,6 +26,19 @@ const ResumeGameModule = (() => {
     if (!root) return;
     // Don't reference NewGameModule here — boot may call open() while that
     // const is still in the temporal dead zone.
+    const body = root.querySelector(".resume-game-module__body");
+    if (body && typeof RoundModule !== "undefined" && RoundModule.hasPersistedGame()) {
+      try {
+        const data =
+          typeof GameProgress !== "undefined" ? GameProgress.load() : null;
+        const finished = Boolean(data && data.winnerAnnounced);
+        body.textContent = finished
+          ? "A finished game is saved on this device."
+          : "A game is already in progress on this device.";
+      } catch {
+        body.textContent = "A game is already in progress on this device.";
+      }
+    }
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
     document.body.classList.add("resume-game-module-open");

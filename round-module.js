@@ -880,12 +880,17 @@ const RoundModule = (() => {
 
   function notifyGameCompleteIfNeeded() {
     if (!isGameComplete() || winnerAnnounced) return false;
+    presentCompletedGame();
+    return true;
+  }
+
+  /** Open winner UI and celebrating board for a finished game (live or resumed). */
+  function presentCompletedGame() {
     winnerAnnounced = true;
     // Board opens on Round 4 without a summary until the indicator is clicked.
     summaryRoundFromClick = null;
     hideScoreboard();
     document.body.classList.remove("round-reviewing");
-    persistGame();
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }
@@ -897,7 +902,8 @@ const RoundModule = (() => {
     if (typeof WinnerModule !== "undefined") {
       WinnerModule.open(podium);
     }
-    return true;
+    // Keep finished games saved until the player starts a new game.
+    persistGame();
   }
 
   function hasActiveGame() {
@@ -1113,9 +1119,9 @@ const RoundModule = (() => {
 
     persistGame();
 
-    // Finish the end-game flow if the last score was saved but the winner UI never opened.
-    if (isGameComplete() && !winnerAnnounced) {
-      notifyGameCompleteIfNeeded();
+    // Finished games stay saved until New Game; resume back into winner + board.
+    if (isGameComplete()) {
+      presentCompletedGame();
     }
 
     return true;
