@@ -46,8 +46,9 @@ const NewGameModule = (() => {
     if (startBtn) {
       startBtn.disabled = draftCount() < RoundModule.MIN_PLAYERS;
     }
+    // Cancel only when opened mid-game from the menu — boot / Continue have nowhere to return.
     if (cancelBtn) {
-      cancelBtn.hidden = !openedFromGame && !RoundModule.gameStarted;
+      cancelBtn.hidden = !openedFromGame;
     }
   }
 
@@ -99,7 +100,8 @@ const NewGameModule = (() => {
     if (panel) panel.hidden = true;
     if (toggle) toggle.setAttribute("aria-expanded", "false");
 
-    if (RoundModule.hasActiveGame()) {
+    // Confirm for any started game (in progress or finished), then wipe save.
+    if (RoundModule.gameStarted) {
       openConfirm();
       return;
     }
@@ -121,7 +123,7 @@ const NewGameModule = (() => {
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
     document.body.classList.add("new-game-module-open");
-    if (!RoundModule.gameStarted) {
+    if (!openedFromGame) {
       document.body.classList.add("is-boot");
     }
     root.querySelector("[data-new-game-start]")?.focus();
@@ -142,7 +144,7 @@ const NewGameModule = (() => {
       return;
     }
     if (event.target.closest("[data-new-game-cancel]")) {
-      if (!RoundModule.gameStarted) return;
+      if (!openedFromGame) return;
       close();
       return;
     }
@@ -152,15 +154,15 @@ const NewGameModule = (() => {
   });
 
   confirmEl?.addEventListener("click", (event) => {
-    if (typeof ResumeGameModule !== "undefined" && ResumeGameModule.isOpen()) {
-      return;
-    }
     if (event.target.closest("[data-new-game-confirm-no]")) {
       closeConfirm();
       return;
     }
     if (event.target.closest("[data-new-game-confirm-yes]")) {
       closeConfirm();
+      // Wipe saved progress as soon as they confirm — don't wait for Start,
+      // and don't restore if they later Cancel the color screen.
+      RoundModule.clearPersistedGame();
       open({ fromGame: true });
       return;
     }
@@ -175,7 +177,7 @@ const NewGameModule = (() => {
       closeConfirm();
       return;
     }
-    if (isOpen() && RoundModule.gameStarted) {
+    if (isOpen() && openedFromGame) {
       close();
     }
   });
