@@ -896,11 +896,16 @@ const RoundModule = (() => {
     }
     const podium = getPodium();
     const winnerColors = (podium.first || []).map((entry) => entry.color);
+    const openWinner = () => {
+      if (typeof WinnerModule !== "undefined") {
+        WinnerModule.open(podium);
+      }
+    };
     if (typeof BoardModule !== "undefined") {
-      BoardModule.presentForWinner(winnerColors);
-    }
-    if (typeof WinnerModule !== "undefined") {
-      WinnerModule.open(podium);
+      // Wait for cube hops before covering the board with the winner modal.
+      BoardModule.presentForWinner(winnerColors, { onReady: openWinner });
+    } else {
+      openWinner();
     }
     // Keep finished games saved until the player starts a new game.
     persistGame();

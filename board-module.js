@@ -94,6 +94,8 @@ const BoardModule = (() => {
   let pendingCelebration = false;
   /** @type {string[]} */
   let celebrationColors = [];
+  /** @type {null | (() => void)} */
+  let pendingWinnerReady = null;
   let celebrationAutoSpin = false;
   let celebrationLastActivity = 0;
   let celebrationRaf = 0;
@@ -648,6 +650,7 @@ const BoardModule = (() => {
 
   function stopCelebration() {
     pendingCelebration = false;
+    pendingWinnerReady = null;
     celebrationActive = false;
     celebrationAutoSpin = false;
     celebrationColors = [];
@@ -659,22 +662,41 @@ const BoardModule = (() => {
     root?.classList.remove("board-module--celebrating");
   }
 
+  function flushWinnerReady() {
+    const cb = pendingWinnerReady;
+    pendingWinnerReady = null;
+    if (typeof cb === "function") cb();
+  }
+
   function maybeStartPendingCelebration() {
     if (!pendingCelebration || !isActive() || hopTimer) return;
     startCelebration(celebrationColors);
+    flushWinnerReady();
   }
 
   /**
    * Open the board behind the winner modal and begin spin + fireworks
-   * once cubes are in their final seats.
+   * once cubes are in their final seats (after any hop animation).
+   * @param {string[]} colorIds
+   * @param {{ onReady?: () => void }} [options] — called after hops (or immediately if none)
    */
-  function presentForWinner(colorIds) {
+  function presentForWinner(colorIds, options = {}) {
     celebrationColors = (colorIds || []).filter(Boolean);
     pendingCelebration = true;
+    pendingWinnerReady =
+      typeof options.onReady === "function" ? options.onReady : null;
+
     if (!isActive()) {
       setActive(true);
       return;
     }
+
+    // Score commit already kicked off hops via refreshView — don't interrupt them.
+    if (hopTimer) {
+      refreshCards();
+      return;
+    }
+
     refreshCards();
     refreshCubes();
     maybeStartPendingCelebration();
