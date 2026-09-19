@@ -72,6 +72,7 @@ const NewGameModule = (() => {
 
   function openConfirm() {
     if (!confirmEl) return;
+    if (typeof WinnerModule !== "undefined") WinnerModule.close();
     confirmEl.hidden = false;
     confirmEl.setAttribute("aria-hidden", "false");
     confirmEl.querySelector("[data-new-game-confirm-yes]")?.focus();
@@ -113,6 +114,7 @@ const NewGameModule = (() => {
     openedFromGame = Boolean(options.fromGame);
     draftColors = new Set();
     closeConfirm();
+    if (typeof WinnerModule !== "undefined") WinnerModule.close();
     if (typeof CharactersFullscreen !== "undefined") {
       CharactersFullscreen.setActive(false);
     }

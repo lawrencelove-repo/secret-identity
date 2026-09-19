@@ -2585,7 +2585,7 @@ body.new-game-module-open {
 .new-game-module {
   position: fixed;
   inset: 0;
-  z-index: 1400;
+  z-index: 1850;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2798,11 +2798,11 @@ body.is-boot .new-game-module__backdrop {
 .new-game-module__color.box--red { --box-color: var(--color-red); }
 .new-game-module__color.box--green { --box-color: var(--color-green); }
 
-/* New game confirm */
+/* New game confirm — above winner (1800) so menu → New Game is never hidden */
 .new-game-confirm {
   position: fixed;
   inset: 0;
-  z-index: 1500;
+  z-index: 1900;
   display: flex;
   align-items: center;
   justify-content: center;
