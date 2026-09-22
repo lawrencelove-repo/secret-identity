@@ -1,5 +1,5 @@
 /* Minimal offline cache for Secret Identity PWA */
-const CACHE_NAME = "secret-identity-v46";
+const CACHE_NAME = "secret-identity-v49";
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,6 +26,7 @@ const ASSETS = [
   "./assets/favicon/android-chrome-192x192.png",
   "./assets/favicon/android-chrome-512x512.png",
   "./assets/bg.png",
+  "./assets/logo.PNG",
   "./assets/all-keys.PNG",
   "./assets/keys/gold.png",
   "./assets/keys/green.png",
