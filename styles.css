@@ -2629,7 +2629,7 @@ body.is-boot .new-game-module__backdrop {
   position: relative;
   z-index: 1;
   display: block;
-  width: min(78vw, 360px);
+  width: min(22vmax, 180px);
   height: auto;
   flex-shrink: 0;
   pointer-events: none;
@@ -2641,7 +2641,6 @@ body.is-boot .new-game-module__backdrop {
     position: absolute;
     right: max(1rem, env(safe-area-inset-right, 0px));
     bottom: max(1rem, env(safe-area-inset-bottom, 0px));
-    width: min(22vw, 180px);
   }
 }
 
